@@ -38,11 +38,14 @@ jobs:
           cache: gradle
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - name: validate content schemas
         run: |
-          python3 -m pip install --quiet --disable-pip-version-check \
-            --break-system-packages jsonschema
-          python3 tools/validate_content.py
+          python -m pip install --disable-pip-version-check jsonschema
+          python tools/validate_content.py
       - name: build
         run: ./gradlew build
       - name: capture build artifacts
