@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/show.schema.json",
+  "palette": [
+    16720384,
+    16755200
+  ],
+  "stamps": [
+    {
+      "shape": "magic-firework:ring",
+      "at": 0,
+      "size": 1.2,
+      "place": {
+        "scale": 6.0
+      },
+      "events": [
+        {
+          "kind": "sound",
+          "at": 0,
+          "id": "minecraft:entity.firework_rocket.blast",
+          "volume": 4.0,
+          "pitch": 1.0
+        }
+      ]
+    }
+  ]
+}

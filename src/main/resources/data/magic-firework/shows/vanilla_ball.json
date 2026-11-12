@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/show.schema.json",
+  "palette": [16756736, 4180223, 16727936, 16777215],
+  "stamps": [
+    {
+      "shape": "magic-firework:vanilla_ball_primary",
+      "at": 0,
+      "place": { "scale": 1.5 },
+      "events": [
+        {
+          "kind": "sound",
+          "at": 0,
+          "id": "minecraft:entity.firework_rocket.blast",
+          "volume": 4.0,
+          "pitch": 1.0
+        }
+      ]
+    },
+    {
+      "shape": "magic-firework:vanilla_ball_primary",
+      "at": 3,
+      "place": { "scale": 2.2 }
+    },
+    {
+      "shape": "magic-firework:vanilla_ball_fade",
+      "at": 7,
+      "place": { "scale": 3.0 }
+    },
+    {
+      "shape": "magic-firework:vanilla_spark",
+      "at": 9,
+      "place": { "scale": 3.2 }
+    }
+  ]
+}

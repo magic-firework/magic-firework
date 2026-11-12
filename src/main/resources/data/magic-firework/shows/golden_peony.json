@@ -1,0 +1,499 @@
+{
+  "$schema": "../../../schemas/show.schema.json",
+  "palette": [
+    16774096,
+    16761418,
+    16747051,
+    15220782,
+    8382207
+  ],
+  "stamps": [
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:ball",
+        "place": {
+          "scale": 0.8
+        },
+        "size": 1.6
+      },
+      "at": 0,
+      "thickness": 0.25,
+      "events": [
+        {
+          "kind": "sound",
+          "at": 0,
+          "id": "minecraft:entity.firework_rocket.large_blast",
+          "volume": 4.0,
+          "pitch": 1.0
+        },
+        {
+          "kind": "light",
+          "at": 0,
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "shape": {
+        "type": "group",
+        "colorOffset": 1,
+        "parts": [
+          {
+            "type": "ink",
+            "ink": "magic-firework:ring",
+            "place": {
+              "rot": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "scale": 4.6
+            },
+            "size": 0.55
+          },
+          {
+            "type": "ink",
+            "ink": "magic-firework:ring",
+            "place": {
+              "rot": [
+                90.0,
+                0.0,
+                0.0
+              ],
+              "scale": 4.6
+            },
+            "size": 0.55
+          },
+          {
+            "type": "ink",
+            "ink": "magic-firework:ring",
+            "place": {
+              "rot": [
+                0.0,
+                0.0,
+                90.0
+              ],
+              "scale": 4.6
+            },
+            "size": 0.55
+          }
+        ]
+      },
+      "at": 0
+    },
+    {
+      "shape": {
+        "type": "ring",
+        "count": 8,
+        "radius": 0.04,
+        "sweep": 360.0,
+        "colorOffset": 0,
+        "size": 1.1,
+        "shape": "magic-firework:petal",
+        "place": {
+          "rot": [
+            68.0,
+            0.0,
+            0.0
+          ],
+          "scale": 3.8
+        }
+      },
+      "at": 1
+    },
+    {
+      "shape": {
+        "type": "ring",
+        "count": 8,
+        "radius": 0.04,
+        "sweep": 360.0,
+        "colorOffset": 1,
+        "size": 1.0,
+        "shape": "magic-firework:petal",
+        "place": {
+          "rot": [
+            90.0,
+            0.0,
+            24.0
+          ],
+          "scale": 2.9
+        }
+      },
+      "at": 3
+    },
+    {
+      "shape": {
+        "type": "ring",
+        "count": 6,
+        "radius": 0.04,
+        "sweep": 360.0,
+        "colorOffset": 2,
+        "size": 0.85,
+        "shape": "magic-firework:petal",
+        "place": {
+          "rot": [
+            112.0,
+            0.0,
+            48.0
+          ],
+          "scale": 2.0
+        }
+      },
+      "at": 5
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 1
+      },
+      "at": 8,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          0.0,
+          0.0,
+          3.2
+        ],
+        "rot": [
+          170.0,
+          0.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 2
+      },
+      "at": 9,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          1.6,
+          0.0,
+          2.7713
+        ],
+        "rot": [
+          170.0,
+          30.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 3
+      },
+      "at": 10,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          2.7713,
+          0.0,
+          1.6
+        ],
+        "rot": [
+          170.0,
+          60.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 1
+      },
+      "at": 11,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          3.2,
+          0.0,
+          0.0
+        ],
+        "rot": [
+          170.0,
+          90.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 2
+      },
+      "at": 12,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          2.7713,
+          0.0,
+          -1.6
+        ],
+        "rot": [
+          170.0,
+          120.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 3
+      },
+      "at": 13,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          1.6,
+          0.0,
+          -2.7713
+        ],
+        "rot": [
+          170.0,
+          150.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 1
+      },
+      "at": 14,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          0.0,
+          0.0,
+          -3.2
+        ],
+        "rot": [
+          170.0,
+          180.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 2
+      },
+      "at": 15,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          -1.6,
+          0.0,
+          -2.7713
+        ],
+        "rot": [
+          170.0,
+          210.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 3
+      },
+      "at": 16,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          -2.7713,
+          0.0,
+          -1.6
+        ],
+        "rot": [
+          170.0,
+          240.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 1
+      },
+      "at": 17,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          -3.2,
+          0.0,
+          -0.0
+        ],
+        "rot": [
+          170.0,
+          270.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 2
+      },
+      "at": 18,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          -2.7713,
+          0.0,
+          1.6
+        ],
+        "rot": [
+          170.0,
+          300.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ink",
+        "ink": "magic-firework:dot",
+        "size": 0.8,
+        "colorOffset": 3
+      },
+      "at": 19,
+      "duration": 34,
+      "path": {
+        "type": "line",
+        "length": 4.0
+      },
+      "place": {
+        "pos": [
+          -1.6,
+          0.0,
+          2.7713
+        ],
+        "rot": [
+          170.0,
+          330.0,
+          0.0
+        ]
+      },
+      "jitter": 0.12
+    },
+    {
+      "shape": {
+        "type": "ring",
+        "count": 12,
+        "radius": 1.0,
+        "sweep": 360.0,
+        "colorOffset": 4,
+        "size": 0.7,
+        "shape": "magic-firework:dot",
+        "place": {
+          "rot": [
+            90.0,
+            0.0,
+            0.0
+          ],
+          "scale": 2.4
+        }
+      },
+      "at": 44,
+      "events": [
+        {
+          "kind": "sound",
+          "at": 0,
+          "id": "minecraft:entity.firework_rocket.twinkle",
+          "volume": 2.0,
+          "pitch": 1.4
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ink",
+  "description": "A point cloud in unit space: the leaf of every form. data/<namespace>/inks/<name>.json. Unknown keys are ignored by the loader, but are rejected here so a typo is visible while typing. Limits: ContentLimits.MAX_INK_POINTS.",
+  "type": "object",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": ["points"]
+    },
+    {
+      "required": ["uv"]
+    }
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "points": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8192,
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 3,
+        "items": {
+          "type": "number"
+        },
+        "description": "[u, v] or [u, v, w]. When both points and uv are present, points wins."
+      }
+    },
+    "uv": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16384,
+      "items": {
+        "type": "number"
+      },
+      "description": "Flat [u0, v0, u1, v1, ...] list. The runtime requires an even length (at most 8192 pairs)."
+    },
+    "colors": {
+      "type": "array",
+      "maxItems": 8192,
+      "items": {
+        "$ref": "./common.schema.json#/$defs/color"
+      },
+      "description": "Per-point palette index, empty or exactly as long as the point cloud."
+    },
+    "sizes": {
+      "type": "array",
+      "maxItems": 8192,
+      "items": {
+        "type": "number",
+        "minimum": 0
+      },
+      "description": "Per-point size, empty or exactly as long as the point cloud."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "One size for every point; used only when sizes is absent or empty."
+    }
+  }
+}

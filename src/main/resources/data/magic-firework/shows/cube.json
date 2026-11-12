@@ -1,0 +1,257 @@
+{
+  "$schema": "../../../schemas/show.schema.json",
+  "palette": [
+    16756736,
+    16727936,
+    16777215
+  ],
+  "stamps": [
+    {
+      "shape": "magic-firework:dot",
+      "at": 0,
+      "place": {
+        "scale": 0.2
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 0
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          -0.6,
+          -0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 0
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          -0.6,
+          0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 0
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          0.6,
+          -0.6,
+          -0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 0
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          0.6,
+          -0.6,
+          0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 1
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          -0.6,
+          -0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          -90.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 1
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          -0.6,
+          0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          -90.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 1
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          0.6,
+          -0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          -90.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 1
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          0.6,
+          0.6
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          -90.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 2
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          -0.6,
+          -0.6
+        ],
+        "rot": [
+          90.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 2
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          -0.6,
+          0.6,
+          -0.6
+        ],
+        "rot": [
+          90.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 2
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          0.6,
+          -0.6,
+          -0.6
+        ],
+        "rot": [
+          90.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "shape": {
+        "type": "shape",
+        "shape": "magic-firework:cube_edge",
+        "colorOffset": 2
+      },
+      "at": 0,
+      "place": {
+        "pos": [
+          0.6,
+          0.6,
+          -0.6
+        ],
+        "rot": [
+          90.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ]
+}

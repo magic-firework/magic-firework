@@ -41,3 +41,11 @@ replay_*.log
 
 # pi
 .pi
+
+# python
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# logs
+logs/
