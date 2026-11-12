@@ -30,13 +30,19 @@ jobs:
       - name: setup jdk
         uses: actions/setup-java@v5
         with:
-          # Must match gradle/gradle-daemon-jvm.properties: Loom 1.19 needs JVM 25+
-          # to run the build. Bytecode is still compiled to Java 17.
+          # Must match gradle/gradle-daemon-jvm.properties: Loom 1.19
+          # needs JVM 25+ to run the build. Bytecode is still compiled to
+          # Java 17.
           java-version: '25'
           distribution: 'microsoft'
           cache: gradle
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: validate content schemas
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check \
+            --break-system-packages jsonschema
+          python3 tools/validate_content.py
       - name: build
         run: ./gradlew build
       - name: capture build artifacts
