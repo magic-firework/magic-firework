@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/firework.schema.json",
+  "attributes": {
+    "flight.speed": 0.15,
+    "flight.direction.mode": "up",
+    "fuse.ticks": 25,
+    "trail.colors": [11141375],
+    "show": "magic-firework:ball_small",
+    "launch.sound": "minecraft:entity.firework_rocket.launch",
+    "max.depth": 3
+  },
+  "program": [
+    { "op": "launch" },
+    { "op": "await" },
+    { "op": "burst" },
+    { "op": "spawn", "program": "magic-firework:ring", "count": 4, "spread": 0.25, "delay": 2 },
+    { "op": "end" }
+  ]
+}

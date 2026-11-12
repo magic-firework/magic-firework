@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/firework.schema.json",
+  "attributes": {
+    "flight.speed": 0.26,
+    "flight.direction.mode": "up",
+    "flight.drag": 0.985,
+    "trail.enabled": true,
+    "trail.interval": 1,
+    "trail.scale": 0.5,
+    "trail.colors": [
+      16761418,
+      16747051
+    ],
+    "show": "magic-firework:golden_peony",
+    "launch.sound": "minecraft:entity.firework_rocket.launch"
+  },
+  "program": [
+    {
+      "op": "launch"
+    },
+    {
+      "op": "await",
+      "ticks": 34
+    },
+    {
+      "op": "burst"
+    },
+    {
+      "op": "await",
+      "ticks": 60
+    },
+    {
+      "op": "end"
+    }
+  ]
+}

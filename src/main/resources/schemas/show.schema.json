@@ -1,0 +1,404 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Show",
+  "description": "A palette plus a flat list of stamps: data/<namespace>/shows/<name>.json. The loader also accepts this exact shape as an inline document on an item or in the library. Limits from ContentLimits: MAX_STAMPS, MAX_PALETTE, MAX_REPEAT, MAX_FORM_DEPTH, MAX_FORM_NODES, MAX_STEPS_PER_SHOW. Depth and node totals are not expressible in JSON Schema; the loader rejects violations at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["stamps"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "palette": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "./common.schema.json#/$defs/color"
+      },
+      "description": "Colours addressed by index; lookups wrap around. Defaults to white."
+    },
+    "stamps": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "#/$defs/stamp"
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The curve the pen travels over the stamp's duration, in the stamp's local space.",
+      "properties": {
+        "type": {
+          "enum": ["none", "line", "arc"],
+          "default": "none"
+        },
+        "length": {
+          "type": "number",
+          "minimum": 0,
+          "description": "line only: travel distance along local +Y."
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "description": "arc only: radius in the local XY plane."
+        },
+        "degrees": {
+          "type": "number",
+          "description": "arc only: sweep in degrees; the sign is ignored."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "const": "line"
+              }
+            }
+          },
+          "then": {
+            "required": ["length"]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "const": "arc"
+              }
+            }
+          },
+          "then": {
+            "required": ["radius", "degrees"]
+          }
+        }
+      ]
+    },
+    "form": {
+      "description": "A composable shape. Either a plain ink id, or an object that places, repeats or recolours a child form.",
+      "oneOf": [
+        {
+          "$ref": "./common.schema.json#/$defs/id"
+        },
+        {
+          "$ref": "#/$defs/formObject"
+        }
+      ]
+    },
+    "formObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["shape", "ink", "path", "plot", "union", "group", "ring", "array", "mirror"],
+          "default": "shape",
+          "description": "Missing type means shape, which then needs shape or ink."
+        },
+        "shape": {
+          "description": "For shape/ink: the ink id. For ring/array/mirror: the child form.",
+          "$ref": "#/$defs/form"
+        },
+        "ink": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "Alias for shape when type is shape/ink."
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/form"
+          },
+          "description": "group/union only: children drawn on top of each other."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256,
+          "description": "Copies for ring/array. Values outside 1..256 are clamped by the runtime."
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "description": "ring only: circle radius in local XY."
+        },
+        "sweep": {
+          "type": "number",
+          "default": 360,
+          "description": "ring only: degrees covered; 360 closes the circle."
+        },
+        "step": {
+          "$ref": "./common.schema.json#/$defs/vec3",
+          "description": "array only: translation between copies."
+        },
+        "axes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["x", "y", "z"]
+          },
+          "description": "mirror only: local axes to reflect across."
+        },
+        "path": {
+          "$ref": "#/$defs/path",
+          "description": "path/plot only: the curve sampled into an inline ink."
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4096,
+          "default": 16,
+          "description": "path/plot only: points to sample along the curve."
+        },
+        "place": {
+          "$ref": "./common.schema.json#/$defs/place"
+        },
+        "colorOffset": {
+          "type": "integer",
+          "default": 0,
+          "description": "Added to every child colour index, then resolved through the show palette."
+        },
+        "size": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64,
+          "default": 1,
+          "description": "Multiplies child point size; <= 0 falls back to 1.0."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["shape", "ink"]
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": ["shape"],
+                "properties": {
+                  "shape": {
+                    "$ref": "./common.schema.json#/$defs/id"
+                  }
+                }
+              },
+              {
+                "required": ["ink"],
+                "properties": {
+                  "ink": {
+                    "$ref": "./common.schema.json#/$defs/id"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "enum": ["path", "plot"]
+              }
+            }
+          },
+          "then": {
+            "required": ["path"]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "enum": ["group", "union"]
+              }
+            }
+          },
+          "then": {
+            "required": ["parts"]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "const": "ring"
+              }
+            }
+          },
+          "then": {
+            "required": ["shape", "radius"]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "const": "array"
+              }
+            }
+          },
+          "then": {
+            "required": ["shape", "step"]
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "const": "mirror"
+              }
+            }
+          },
+          "then": {
+            "required": ["shape", "axes"]
+          }
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A non-visual effect scheduled relative to the stamp's start tick.",
+      "properties": {
+        "kind": {
+          "enum": ["sound", "light"],
+          "default": "sound"
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Ticks after the stamp's at."
+        },
+        "id": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "sound only: the sound event id."
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "default": 1,
+          "description": "sound only."
+        },
+        "pitch": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2,
+          "default": 1,
+          "description": "sound only."
+        },
+        "ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 20,
+          "description": "light only: how long the light block stays."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "const": "light"
+              }
+            }
+          },
+          "then": {
+            "required": ["ticks"],
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["id"]
+                },
+                {
+                  "required": ["volume"]
+                },
+                {
+                  "required": ["pitch"]
+                }
+              ]
+            }
+          },
+          "else": {
+            "required": ["id"]
+          }
+        }
+      ]
+    },
+    "stamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape"],
+      "description": "One instance of a form: when it appears, how it moves, and how it is brushed.",
+      "properties": {
+        "shape": {
+          "$ref": "#/$defs/form"
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "default": 0,
+          "description": "Tick offset from the burst."
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096,
+          "default": 0,
+          "description": "Ticks spent walking path; 0 draws the form once."
+        },
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "place": {
+          "$ref": "./common.schema.json#/$defs/place"
+        },
+        "size": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 64,
+          "default": 1,
+          "description": "Multiplies every point size; <= 0 falls back to 1.0."
+        },
+        "thickness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0,
+          "description": "Gaussian smear radius applied to each point."
+        },
+        "jitter": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0,
+          "description": "Uniform random displacement applied to each point."
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          }
+        }
+      }
+    }
+  }
+}

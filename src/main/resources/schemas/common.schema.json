@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Magic Firework common definitions",
+  "description": "Shared definitions for inks, shows and firework profiles. Ranges mirror ContentLimits, Attributes and FireworkLimits; keep them in sync when those change.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$",
+      "description": "Namespaced content id, e.g. magic-firework:ring. Both halves must be lower case; the colon is required."
+    },
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      },
+      "description": "[x, y, z]"
+    },
+    "color": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16777215,
+      "description": "24-bit RGB colour, e.g. 16755200 (0xFFAA00)."
+    },
+    "place": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pos": {
+          "$ref": "#/$defs/vec3",
+          "description": "Translation in blocks."
+        },
+        "rot": {
+          "$ref": "#/$defs/vec3",
+          "description": "Euler angles in degrees, applied as Ry * Rx * Rz."
+        },
+        "scale": {
+          "type": "number",
+          "description": "Uniform scale. Values <= 0 fall back to 1.0 at runtime."
+        }
+      }
+    }
+  }
+}

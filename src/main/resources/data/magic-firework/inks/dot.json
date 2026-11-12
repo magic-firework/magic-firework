@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../schemas/ink.schema.json",
+  "points": [
+    [
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "sizes": [
+    1.4
+  ]
+}

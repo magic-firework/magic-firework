@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Firework profile",
+  "description": "A straight-line op program plus its default attributes: data/<namespace>/fireworks/<name>.json. Ranges mirror Attributes and FireworkLimits; values outside them are clamped by the runtime, so the schema flags them instead. An unknown op is a hard error; an unknown attribute is kept and ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["program"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "attributes": {
+      "$ref": "#/$defs/attributes"
+    },
+    "program": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/op"
+      }
+    }
+  },
+  "$defs": {
+    "attributes": {
+      "type": "object",
+      "description": "The open attribute bag. Known keys are typed below; unknown keys are allowed on purpose so newer content still loads on an older build.",
+      "additionalProperties": true,
+      "properties": {
+        "flight.speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Blocks per tick. Overrides the launch op's speed when present."
+        },
+        "flight.gravity": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Downward acceleration per tick; 0 keeps the rocket level."
+        },
+        "flight.max_speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Velocity cap per tick; 0 freezes the rocket in place."
+        },
+        "flight.drag": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Velocity multiplier per tick; 1.0 means no drag."
+        },
+        "flight.direction.mode": {
+          "enum": ["up", "look", "vector"],
+          "default": "up"
+        },
+        "flight.direction.x": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "vector mode only."
+        },
+        "flight.direction.y": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "vector mode only."
+        },
+        "flight.direction.z": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "vector mode only."
+        },
+        "collide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Explode on the first block or entity collision."
+        },
+        "decorative": {
+          "type": "boolean",
+          "default": true,
+          "description": "Immune to damage and ignored by entity targeting."
+        },
+        "afterglow": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200,
+          "default": 0,
+          "description": "Ticks the entity survives after its program ends."
+        },
+        "max.depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 3,
+          "description": "Maximum nested split depth; 0 forbids children."
+        },
+        "max.children": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256,
+          "default": 32,
+          "description": "Maximum children this rocket may spawn over its whole life."
+        },
+        "trail.enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "trail.interval": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 1,
+          "description": "Emit a trail particle every N ticks."
+        },
+        "trail.colors": {
+          "type": "array",
+          "items": {
+            "$ref": "./common.schema.json#/$defs/color"
+          },
+          "description": "Trail colours; one is chosen at random per particle."
+        },
+        "trail.scale": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 4,
+          "default": 0.6
+        },
+        "launch.sound": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "Sound played once when the rocket is created."
+        },
+        "fuse.ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 400,
+          "default": 40,
+          "description": "Replaces the await immediately before a burst when the attribute is present."
+        },
+        "sound.id": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "Overrides the id of every sound op."
+        },
+        "sound.volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "default": 1
+        },
+        "sound.pitch": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2,
+          "default": 1
+        },
+        "light.ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 20,
+          "description": "Overrides the ticks of every light op."
+        },
+        "show": {
+          "description": "The show a burst bakes: an installed id, or an inline show document.",
+          "anyOf": [
+            {
+              "$ref": "./common.schema.json#/$defs/id"
+            },
+            {
+              "$ref": "./show.schema.json"
+            }
+          ]
+        }
+      }
+    },
+    "op": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "description": "One instruction. Time is await, nesting is call/end, children are spawn.",
+      "properties": {
+        "op": {
+          "enum": ["launch", "await", "set", "burst", "call", "spawn", "sound", "light", "end"]
+        },
+        "direction": {
+          "enum": ["up", "look", "vector"],
+          "default": "up",
+          "description": "launch only. An attribute override wins when flight.direction.mode is set."
+        },
+        "vector": {
+          "$ref": "./common.schema.json#/$defs/vec3",
+          "description": "launch only: the direction when direction is vector."
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "launch only: initial speed in blocks per tick. An attribute override wins."
+        },
+        "ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "await: elapsed ticks. light: light duration (0..400)."
+        },
+        "height": {
+          "type": "number",
+          "description": "await only: proceed once position.y is above this."
+        },
+        "below": {
+          "type": "number",
+          "description": "await only: proceed once position.y is below this."
+        },
+        "collision": {
+          "type": "boolean",
+          "description": "await only: proceed once the rocket has collided."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "await only: failsafe ticks, ORed with the primary condition."
+        },
+        "attributes": {
+          "$ref": "#/$defs/attributes",
+          "description": "set only: merged into the local overlay."
+        },
+        "program": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "call/spawn only: the program to run or split into."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256,
+          "description": "spawn only: number of children."
+        },
+        "spread": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "spawn only: 0 follows the parent exactly, 1 aims fully random."
+        },
+        "delay": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "spawn only: ticks before each child appears."
+        },
+        "id": {
+          "$ref": "./common.schema.json#/$defs/id",
+          "description": "sound only: the sound event."
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "sound only."
+        },
+        "pitch": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2,
+          "description": "sound only."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["op", "direction"],
+            "properties": {
+              "op": {
+                "const": "launch"
+              },
+              "direction": {
+                "const": "vector"
+              }
+            }
+          },
+          "then": {
+            "required": ["vector"]
+          }
+        },
+        {
+          "if": {
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "const": "set"
+              }
+            }
+          },
+          "then": {
+            "required": ["attributes"]
+          }
+        },
+        {
+          "if": {
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "enum": ["call", "spawn"]
+              }
+            }
+          },
+          "then": {
+            "required": ["program"]
+          }
+        },
+        {
+          "if": {
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "const": "sound"
+              }
+            }
+          },
+          "then": {
+            "required": ["id"]
+          }
+        }
+      ]
+    }
+  }
+}
