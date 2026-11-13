@@ -6,12 +6,15 @@ import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
 import com.magic.firework.entity.MagicFireworkEntity;
 import com.magic.firework.platform.CloudProtocol;
+import com.magic.firework.screen.FireworkEditorMenu;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -31,11 +34,17 @@ public final class FireworkNetworking {
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
+	/** Client -> server: open the firework editor menu. */
+	public static final ResourceLocation OPEN_EDITOR_CHANNEL = MagicFirework.id("open_editor");
 
 	private FireworkNetworking() {
 	}
 
 	public static void init() {
+		ServerPlayNetworking.registerGlobalReceiver(OPEN_EDITOR_CHANNEL,
+				(server, player, handler, buf, responseSender) -> server.execute(() -> player.openMenu(
+						new SimpleMenuProvider((containerId, inventory, p) -> new FireworkEditorMenu(containerId, inventory),
+								Component.translatable("screen.magic-firework.editor.title")))));
 	}
 
 	public static void sendProfile(ServerPlayer player, MagicFireworkEntity entity) {

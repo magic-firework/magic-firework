@@ -7,11 +7,14 @@ import com.magic.firework.entity.MagicFireworkEntity;
 import com.magic.firework.item.FireworkBlueprintItem;
 import com.magic.firework.item.FireworkDataHelper;
 import com.magic.firework.item.MagicFireworkItem;
+import com.magic.firework.screen.FireworkEditorMenu;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Registry;
@@ -38,6 +41,11 @@ public final class ModRegistries {
 			BuiltInRegistries.ITEM,
 			FIREWORK_BLUEPRINT_ID,
 			new FireworkBlueprintItem(new Item.Properties().stacksTo(1)));
+
+	public static final MenuType<FireworkEditorMenu> FIREWORK_EDITOR_MENU = Registry.register(
+			BuiltInRegistries.MENU,
+			new ResourceLocation(MagicFirework.MOD_ID, "firework_editor"),
+			new MenuType<>((containerId, inventory) -> new FireworkEditorMenu(containerId, inventory), FeatureFlags.VANILLA_SET));
 
 	private ModRegistries() {
 	}

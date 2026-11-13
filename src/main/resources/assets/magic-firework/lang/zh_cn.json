@@ -6,5 +6,35 @@
   "tooltip.magic-firework.blueprint.blank_hint": "与一个魔法烟花合成以写入配方",
   "tooltip.magic-firework.blueprint.cost": "材料：%s",
   "tooltip.magic-firework.blueprint.entry": "%s ×%s",
-  "tooltip.magic-firework.blueprint.locked": "已写满，无法修改"
+  "tooltip.magic-firework.blueprint.locked": "已写满，无法修改",
+
+  "key.categories.magic-firework": "魔法烟花",
+  "key.magic-firework.open_editor": "打开烟花编辑台",
+
+  "screen.magic-firework.editor.title": "烟花合成台",
+  "screen.magic-firework.editor.profile": "配方：%s",
+  "screen.magic-firework.editor.no_profile": "尚未放入烟花",
+  "screen.magic-firework.editor.place_hint": "将魔法烟花放入中央槽位",
+  "screen.magic-firework.editor.reveal_hint": "放入后，周边将浮现编辑槽位",
+
+  "attr.magic-firework.flight.speed": "飞行速度",
+  "attr.magic-firework.flight.gravity": "重力",
+  "attr.magic-firework.flight.drag": "阻力",
+  "attr.magic-firework.trail.enabled": "轨迹",
+  "attr.magic-firework.fuse.ticks": "引线",
+  "attr.magic-firework.afterglow": "余辉",
+  "attr.magic-firework.max.depth": "分裂深度",
+  "attr.magic-firework.show": "图案",
+
+  "gui.magic-firework.on": "开",
+  "gui.magic-firework.off": "关",
+
+  "screen.magic-firework.editor.slot.shape": "形状",
+  "screen.magic-firework.editor.slot.color": "颜色",
+  "screen.magic-firework.editor.slot.effect": "特效",
+  "screen.magic-firework.editor.slot.flight": "飞行",
+  "screen.magic-firework.editor.slot.fuse": "引线",
+  "screen.magic-firework.editor.slot.sound": "声音",
+  "screen.magic-firework.editor.slot.light": "光效",
+  "screen.magic-firework.editor.slot.trail": "轨迹"
 }
