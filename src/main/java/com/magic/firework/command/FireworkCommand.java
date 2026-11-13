@@ -16,7 +16,9 @@ import com.magic.firework.attribute.Attributes;
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.content.DefinitionIds;
 import com.magic.firework.content.FireworkProfile;
+import com.magic.firework.craft.FormulaCost;
 import com.magic.firework.entity.MagicFireworkEntity;
+import com.magic.firework.item.BlueprintDataHelper;
 import com.magic.firework.item.FireworkDataHelper;
 import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
@@ -72,6 +74,12 @@ public final class FireworkCommand {
 								.then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
 										.executes(context -> give(context, DefinitionIds.GOLDEN_PEONY,
 												IntegerArgumentType.getInteger(context, "count")))))
+						.then(Commands.literal("blueprint")
+								.executes(context -> blueprint(context, null))
+								.then(Commands.argument("profile", ResourceLocationArgument.id())
+										.suggests(FireworkCommand::suggestProfiles)
+										.executes(context -> blueprint(context,
+												ResourceLocationArgument.getId(context, "profile")))))
 						.then(Commands.literal("list")
 								.executes(FireworkCommand::list))
 						.then(Commands.literal("sim")
@@ -172,6 +180,38 @@ public final class FireworkCommand {
 		}
 		context.getSource().sendSuccess(() -> Component.literal("gave " + amount + " × " + id), false);
 		return amount;
+	}
+
+	/** A blank sheet, or a written one for a profile, for testing without a crafting table. */
+	private static int blueprint(com.mojang.brigadier.context.CommandContext<CommandSourceStack> context,
+			ResourceLocation id) {
+		ServerPlayer player = context.getSource().getPlayer();
+		if (player == null) {
+			context.getSource().sendFailure(Component.literal("run this as a player"));
+			return 0;
+		}
+		FireworkRuntime runtime = runtime(context.getSource());
+		if (runtime == null) {
+			return 0;
+		}
+		ItemStack blueprint = new ItemStack(ModRegistries.FIREWORK_BLUEPRINT_ITEM);
+		if (id != null) {
+			FireworkProfile profile = runtime.definitions().get(id);
+			if (profile == null) {
+				context.getSource().sendFailure(Component.literal("unknown profile " + id));
+				return 0;
+			}
+			ItemStack sample = FireworkDataHelper.create(ModRegistries.MAGIC_FIREWORK_ITEM, id, AttributeBag.EMPTY);
+			BlueprintDataHelper.write(blueprint, FireworkDataHelper.source(sample),
+					FormulaCost.of(profile, AttributeBag.EMPTY));
+		}
+		if (!player.getInventory().add(blueprint)) {
+			player.drop(blueprint, false);
+		}
+		context.getSource().sendSuccess(() -> Component.literal(id == null
+				? "gave a blank blueprint"
+				: "gave a blueprint for " + id), false);
+		return 1;
 	}
 
 	/** Stores the held item's inline document under a library name. */

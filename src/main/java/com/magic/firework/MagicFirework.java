@@ -10,6 +10,7 @@ import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.registry.DefinitionReloadListener;
 import com.magic.firework.registry.ModRegistries;
+import com.magic.firework.recipe.ModRecipes;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -34,6 +35,7 @@ public class MagicFirework implements ModInitializer {
 	public void onInitialize() {
 		// content: profiles and shows from data packs, plus the writable library
 		ModRegistries.init();
+		ModRecipes.init();
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new DefinitionReloadListener());
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ContentReloadListener());
 		FireworkNetworking.init();
@@ -55,7 +57,10 @@ public class MagicFirework implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STOPPED.register(RuntimeRegistry::stop);
 
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES)
-				.register(entries -> entries.accept(ModRegistries.defaultStack()));
+				.register(entries -> {
+					entries.accept(ModRegistries.defaultStack());
+					entries.accept(ModRegistries.defaultBlueprint());
+				});
 		FireworkCommand.init();
 
 		LOGGER.info("Magic Firework initialised");

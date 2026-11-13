@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:paper"
+    }
+  ],
+  "result": {
+    "item": "magic-firework:firework_blueprint",
+    "count": 1
+  }
+}
