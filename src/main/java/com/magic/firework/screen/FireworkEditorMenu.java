@@ -2,7 +2,6 @@ package com.magic.firework.screen;
 
 import com.magic.firework.registry.ModRegistries;
 
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -26,8 +25,8 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     private static final int HOTBAR_END = 36; // inclusive
 
     /** Centre slot position, relative to the screen's leftPos/topPos. */
-    public static final int CENTER_X = 181;
-    public static final int CENTER_Y = 111;
+    public static final int CENTER_X = 43;
+    public static final int CENTER_Y = 107;
 
     private final Container center = new SimpleContainer(1);
 
@@ -98,15 +97,16 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        // Only the server owns the container contents; the client copy is discarded.
-        if (player instanceof ServerPlayer serverPlayer) {
-            ItemStack stack = center.getItem(0);
-            if (!stack.isEmpty()) {
-                center.setItem(0, ItemStack.EMPTY);
-                if (!serverPlayer.getInventory().add(stack)) {
-                    serverPlayer.drop(stack, false);
-                }
-            }
-        }
+        this.clearContainer(player, this.center);
+    }
+
+    /**
+     * Return the centre firework to the player using vanilla's {@link #clearContainer}
+     * semantics — exactly like a crafting table empties its grid: the firework goes back to
+     * the inventory, or drops on the ground when the inventory is full (or the player has
+     * disconnected). Called from the disconnect hook so it happens before the player is saved.
+     */
+    public void returnContents(Player player) {
+        this.clearContainer(player, this.center);
     }
 }

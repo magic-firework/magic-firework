@@ -33,9 +33,9 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     private static final int IMAGE_W = 380;
     private static final int IMAGE_H = 260;
 
-    /** Ring slot angles in degrees, clockwise from the top. */
-    private static final float[] ANGLES = { -90.0F, -45.0F, 0.0F, 45.0F, 90.0F, 135.0F, 180.0F, 225.0F };
-    private static final int RING_RADIUS = 40;
+    /** Category slots: a 4×2 grid to the right of the firework slot. */
+    private static final int[] GRID_COL_X = { 180, 214, 248, 282 };
+    private static final int[] GRID_ROW_Y = { 74, 122 };
     private static final int SLOT_SIZE = 22;
 
     private static final int ATTR_X = 40;
@@ -53,8 +53,8 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
             new Category("screen.magic-firework.editor.slot.trail", new ItemStack(Items.GUNPOWDER)));
 
     /** Category slot top-left corners, relative to leftPos/topPos. */
-    private final int[] catX = new int[ANGLES.length];
-    private final int[] catY = new int[ANGLES.length];
+    private final int[] catX = new int[CATEGORIES.size()];
+    private final int[] catY = new int[CATEGORIES.size()];
 
     /** 0 → surrounding slots hidden, 1 → fully revealed. */
     private float reveal;
@@ -116,9 +116,9 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         // ── centre slot + surrounding categories ───────────────────────────
         if (center.isEmpty()) {
             g.drawCenteredString(font, Component.translatable("screen.magic-firework.editor.place_hint"),
-                    x + 190, y + 150, 0xFFE0E0E0);
+                    x + 190, y + 110, 0xFFE0E0E0);
             g.drawCenteredString(font, Component.translatable("screen.magic-firework.editor.reveal_hint"),
-                    x + 190, y + 162, 0xFF8B8B8B);
+                    x + 190, y + 124, 0xFF8B8B8B);
         } else if (reveal > 0.02F) {
             int alpha = (int) (reveal * 255);
             boolean clickable = reveal > 0.5F;
@@ -170,14 +170,9 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     // ── rendering helpers ─────────────────────────────────────────────────────
 
     private void layout() {
-        int ringCx = FireworkEditorMenu.CENTER_X + 9;
-        int ringCy = FireworkEditorMenu.CENTER_Y + 9;
-        for (int i = 0; i < ANGLES.length; i++) {
-            double rad = Math.toRadians(ANGLES[i]);
-            int cx = (int) Math.round(ringCx + Math.cos(rad) * RING_RADIUS);
-            int cy = (int) Math.round(ringCy + Math.sin(rad) * RING_RADIUS);
-            catX[i] = cx - SLOT_SIZE / 2;
-            catY[i] = cy - SLOT_SIZE / 2;
+        for (int i = 0; i < CATEGORIES.size(); i++) {
+            catX[i] = GRID_COL_X[i % GRID_COL_X.length];
+            catY[i] = GRID_ROW_Y[i / GRID_COL_X.length];
         }
     }
 

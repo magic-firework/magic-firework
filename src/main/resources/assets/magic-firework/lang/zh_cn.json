@@ -14,8 +14,8 @@
   "screen.magic-firework.editor.title": "烟花合成台",
   "screen.magic-firework.editor.profile": "配方：%s",
   "screen.magic-firework.editor.no_profile": "尚未放入烟花",
-  "screen.magic-firework.editor.place_hint": "将魔法烟花放入中央槽位",
-  "screen.magic-firework.editor.reveal_hint": "放入后，周边将浮现编辑槽位",
+  "screen.magic-firework.editor.place_hint": "将魔法烟花放入左侧栏位",
+  "screen.magic-firework.editor.reveal_hint": "放入后，右侧将浮现编辑栏位",
 
   "attr.magic-firework.flight.speed": "飞行速度",
   "attr.magic-firework.flight.gravity": "重力",

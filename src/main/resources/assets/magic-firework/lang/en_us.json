@@ -14,8 +14,8 @@
   "screen.magic-firework.editor.title": "Firework Crafting Table",
   "screen.magic-firework.editor.profile": "Recipe: %s",
   "screen.magic-firework.editor.no_profile": "No firework placed",
-  "screen.magic-firework.editor.place_hint": "Place a magic firework in the center slot",
-  "screen.magic-firework.editor.reveal_hint": "Surrounding slots will appear once placed",
+  "screen.magic-firework.editor.place_hint": "Place a magic firework in the left slot",
+  "screen.magic-firework.editor.reveal_hint": "Editing slots will appear on the right once placed",
 
   "attr.magic-firework.flight.speed": "Speed",
   "attr.magic-firework.flight.gravity": "Gravity",

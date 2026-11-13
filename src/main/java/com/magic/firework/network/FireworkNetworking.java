@@ -9,6 +9,7 @@ import com.magic.firework.platform.CloudProtocol;
 import com.magic.firework.screen.FireworkEditorMenu;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -45,6 +46,15 @@ public final class FireworkNetworking {
 				(server, player, handler, buf, responseSender) -> server.execute(() -> player.openMenu(
 						new SimpleMenuProvider((containerId, inventory, p) -> new FireworkEditorMenu(containerId, inventory),
 								Component.translatable("screen.magic-firework.editor.title")))));
+
+		// Return a firework left in the editor when the player quits/disconnects with the
+		// menu still open. This fires before PlayerList.remove saves the player, so the item
+		// survives instead of being dropped by the (too-late) menu removed() callback.
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			if (handler.player.containerMenu instanceof FireworkEditorMenu menu) {
+				menu.returnContents(handler.player);
+			}
+		});
 	}
 
 	public static void sendProfile(ServerPlayer player, MagicFireworkEntity entity) {
