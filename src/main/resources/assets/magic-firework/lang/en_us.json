@@ -1,4 +1,10 @@
 {
   "item.magic-firework.magic_firework": "Magic Firework",
-  "entity.magic-firework.magic_firework": "Magic Firework"
+  "item.magic-firework.firework_blueprint": "Firework Blueprint",
+  "entity.magic-firework.magic_firework": "Magic Firework",
+  "tooltip.magic-firework.blueprint.blank": "Blank blueprint",
+  "tooltip.magic-firework.blueprint.blank_hint": "Craft it with a magic firework to write the formula",
+  "tooltip.magic-firework.blueprint.cost": "Materials: %s",
+  "tooltip.magic-firework.blueprint.entry": "%s x%s",
+  "tooltip.magic-firework.blueprint.locked": "Written — cannot be changed"
 }

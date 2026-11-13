@@ -1,4 +1,10 @@
 {
   "item.magic-firework.magic_firework": "魔法烟花",
-  "entity.magic-firework.magic_firework": "魔法烟花"
+  "item.magic-firework.firework_blueprint": "烟花图纸",
+  "entity.magic-firework.magic_firework": "魔法烟花",
+  "tooltip.magic-firework.blueprint.blank": "空白图纸",
+  "tooltip.magic-firework.blueprint.blank_hint": "与一个魔法烟花合成以写入配方",
+  "tooltip.magic-firework.blueprint.cost": "材料：%s",
+  "tooltip.magic-firework.blueprint.entry": "%s ×%s",
+  "tooltip.magic-firework.blueprint.locked": "已写满，无法修改"
 }

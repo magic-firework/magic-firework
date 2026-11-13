@@ -35,7 +35,12 @@ public final class FireworkDataHelper {
 	}
 
 	public static ResourceLocation profileId(ItemStack stack) {
-		String value = root(stack).getString(PROFILE);
+		return profileId(root(stack));
+	}
+
+	/** Same read as {@link #profileId(ItemStack)}, for a detached {@code MagicFirework} tag. */
+	public static ResourceLocation profileId(CompoundTag source) {
+		String value = source == null ? "" : source.getString(PROFILE);
 		if (value.isEmpty()) {
 			return DefinitionIds.RING12;
 		}
@@ -44,8 +49,12 @@ public final class FireworkDataHelper {
 	}
 
 	public static AttributeBag overlay(ItemStack stack) {
-		CompoundTag root = root(stack);
-		return root.contains(OVERLAY) ? AttributeBag.load(root.get(OVERLAY)) : AttributeBag.EMPTY;
+		return overlay(root(stack));
+	}
+
+	/** Same read as {@link #overlay(ItemStack)}, for a detached {@code MagicFirework} tag. */
+	public static AttributeBag overlay(CompoundTag source) {
+		return source != null && source.contains(OVERLAY) ? AttributeBag.load(source.get(OVERLAY)) : AttributeBag.EMPTY;
 	}
 
 	public static void setProfile(ItemStack stack, ResourceLocation profileId) {
@@ -54,6 +63,18 @@ public final class FireworkDataHelper {
 
 	public static void setOverlay(ItemStack stack, AttributeBag overlay) {
 		root(stack).put(OVERLAY, overlay.save());
+	}
+
+	/** @return a copy of the {@code MagicFirework} tag, or an empty tag when the stack has none */
+	public static CompoundTag source(ItemStack stack) {
+		CompoundTag source = stack.getTagElement(ROOT);
+		return source == null ? new CompoundTag() : source.copy();
+	}
+
+	/** Replace the {@code MagicFirework} tag wholesale (used when copying a firework). */
+	public static void applySource(ItemStack stack, CompoundTag source) {
+		CompoundTag tag = stack.getOrCreateTag();
+		tag.put(ROOT, source == null ? new CompoundTag() : source.copy());
 	}
 
 	/** Store a show reference on the item: an id string, or a compound for inline content. */
