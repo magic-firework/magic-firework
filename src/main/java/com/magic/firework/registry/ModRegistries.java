@@ -11,6 +11,8 @@ import com.magic.firework.block.FireworkCraftingTableBlock;
 import com.magic.firework.blockentity.FireworkCraftingTableBlockEntity;
 import com.magic.firework.screen.FireworkEditorMenu;
 
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
