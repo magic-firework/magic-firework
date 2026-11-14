@@ -47,12 +47,12 @@ public final class FireworkNetworking {
 						new SimpleMenuProvider((containerId, inventory, p) -> new FireworkEditorMenu(containerId, inventory),
 								Component.translatable("screen.magic-firework.editor.title")))));
 
-		// Return a firework left in the editor when the player quits/disconnects with the
-		// menu still open. This fires before PlayerList.remove saves the player, so the item
-		// survives instead of being dropped by the (too-late) menu removed() callback.
+		// Save a firework left in the editor when the player quits/disconnects with the menu
+		// still open. This fires before PlayerList.remove saves the player, so the firework
+		// persists instead of being dropped by the (too-late) menu removed() callback.
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			if (handler.player.containerMenu instanceof FireworkEditorMenu menu) {
-				menu.returnContents(handler.player);
+				menu.saveContents(handler.player);
 			}
 		});
 	}

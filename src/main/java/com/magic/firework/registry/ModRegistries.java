@@ -9,6 +9,8 @@ import com.magic.firework.item.FireworkDataHelper;
 import com.magic.firework.item.MagicFireworkItem;
 import com.magic.firework.screen.FireworkEditorMenu;
 
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -46,6 +48,13 @@ public final class ModRegistries {
 			BuiltInRegistries.MENU,
 			new ResourceLocation(MagicFirework.MOD_ID, "firework_editor"),
 			new MenuType<>((containerId, inventory) -> new FireworkEditorMenu(containerId, inventory), FeatureFlags.VANILLA_SET));
+
+	/**
+	 * The firework currently sitting in the editor, stored per player like a furnace keeps
+	 * its contents — it survives closing the menu, logging out, and server restarts.
+	 */
+	public static final AttachmentType<ItemStack> EDITOR_FIREWORK =
+			AttachmentRegistry.createPersistent(MagicFirework.id("editor_firework"), ItemStack.CODEC);
 
 	private ModRegistries() {
 	}

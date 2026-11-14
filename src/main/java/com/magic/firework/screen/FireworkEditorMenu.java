@@ -2,6 +2,8 @@ package com.magic.firework.screen;
 
 import com.magic.firework.registry.ModRegistries;
 
+import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -14,8 +16,10 @@ import net.minecraft.world.item.ItemStack;
  * The firework editor container.
  *
  * <p>One centre slot accepts the magic firework being edited; the rest is the standard
- * player inventory (27 slots + 9 hotbar). The firework left in the centre slot is returned
- * to the player when the menu closes, mirroring how single-input vanilla menus behave.
+ * player inventory (27 slots + 9 hotbar). The firework stays in the editor across sessions:
+ * it is saved to the player's persistent data when the menu closes (or the player
+ * disconnects) and restored when the menu reopens, like a furnace keeping its contents
+ * instead of dropping them.
  */
 public class FireworkEditorMenu extends AbstractContainerMenu {
     public static final int CENTER_SLOT = 0;
@@ -32,6 +36,10 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 
     public FireworkEditorMenu(int containerId, Inventory playerInventory) {
         super(ModRegistries.FIREWORK_EDITOR_MENU, containerId);
+
+        if (playerInventory.player instanceof ServerPlayer serverPlayer) {
+            this.center.setItem(0, loadStored(serverPlayer));
+        }
 
         this.addSlot(new Slot(center, 0, CENTER_X, CENTER_Y) {
             @Override
@@ -97,16 +105,32 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        this.clearContainer(player, this.center);
+        if (player instanceof ServerPlayer serverPlayer) {
+            store(serverPlayer, this.center.getItem(0));
+        }
     }
 
     /**
-     * Return the centre firework to the player using vanilla's {@link #clearContainer}
-     * semantics — exactly like a crafting table empties its grid: the firework goes back to
-     * the inventory, or drops on the ground when the inventory is full (or the player has
-     * disconnected). Called from the disconnect hook so it happens before the player is saved.
+     * Persist the centre firework so it survives the session. Called from the disconnect hook
+     * so it happens before the player is saved, and from {@link #removed} on a normal close —
+     * neither path returns or drops the firework; it stays in the editor for next time.
      */
-    public void returnContents(Player player) {
-        this.clearContainer(player, this.center);
+    public void saveContents(Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            store(serverPlayer, this.center.getItem(0));
+        }
+    }
+
+    private static ItemStack loadStored(ServerPlayer player) {
+        return ((AttachmentTarget) player).getAttachedOrElse(ModRegistries.EDITOR_FIREWORK, ItemStack.EMPTY);
+    }
+
+    private static void store(ServerPlayer player, ItemStack stack) {
+        AttachmentTarget target = (AttachmentTarget) player;
+        if (stack.isEmpty()) {
+            target.removeAttached(ModRegistries.EDITOR_FIREWORK);
+        } else {
+            target.setAttached(ModRegistries.EDITOR_FIREWORK, stack);
+        }
     }
 }
