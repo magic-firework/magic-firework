@@ -6,5 +6,35 @@
   "tooltip.magic-firework.blueprint.blank_hint": "Craft it with a magic firework to write the formula",
   "tooltip.magic-firework.blueprint.cost": "Materials: %s",
   "tooltip.magic-firework.blueprint.entry": "%s x%s",
-  "tooltip.magic-firework.blueprint.locked": "Written — cannot be changed"
+  "tooltip.magic-firework.blueprint.locked": "Written — cannot be changed",
+
+  "key.categories.magic-firework": "Magic Firework",
+  "key.magic-firework.open_editor": "Open Firework Editor",
+
+  "screen.magic-firework.editor.title": "Firework Crafting Table",
+  "screen.magic-firework.editor.profile": "Recipe: %s",
+  "screen.magic-firework.editor.no_profile": "No firework placed",
+  "screen.magic-firework.editor.place_hint": "Place a magic firework in the left slot",
+  "screen.magic-firework.editor.reveal_hint": "Editing slots will appear on the right once placed",
+
+  "attr.magic-firework.flight.speed": "Speed",
+  "attr.magic-firework.flight.gravity": "Gravity",
+  "attr.magic-firework.flight.drag": "Drag",
+  "attr.magic-firework.trail.enabled": "Trail",
+  "attr.magic-firework.fuse.ticks": "Fuse",
+  "attr.magic-firework.afterglow": "Afterglow",
+  "attr.magic-firework.max.depth": "Split depth",
+  "attr.magic-firework.show": "Pattern",
+
+  "gui.magic-firework.on": "On",
+  "gui.magic-firework.off": "Off",
+
+  "screen.magic-firework.editor.slot.shape": "Shape",
+  "screen.magic-firework.editor.slot.color": "Color",
+  "screen.magic-firework.editor.slot.effect": "Effect",
+  "screen.magic-firework.editor.slot.flight": "Flight",
+  "screen.magic-firework.editor.slot.fuse": "Fuse",
+  "screen.magic-firework.editor.slot.sound": "Sound",
+  "screen.magic-firework.editor.slot.light": "Light",
+  "screen.magic-firework.editor.slot.trail": "Trail"
 }
