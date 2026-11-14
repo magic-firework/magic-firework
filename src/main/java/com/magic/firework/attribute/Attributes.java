@@ -49,8 +49,8 @@ public final class Attributes {
 	public static final String LAUNCH_SOUND = "launch.sound";
 
 	// ── op parameters ────────────────────────────────────────────────────────
-	/** Only the {@code await} immediately before a {@code burst} reads this. */
-	public static final Attr.IntAttr FUSE_TICKS = new Attr.IntAttr("fuse.ticks", 40, 1, 400);
+	/** Only the {@code await} immediately before a {@code burst} reads this; 0 bursts at once. */
+	public static final Attr.IntAttr FUSE_TICKS = new Attr.IntAttr("fuse.ticks", 40, 0, 400);
 	public static final String SOUND_ID = "sound.id";
 	public static final Attr.FloatAttr SOUND_VOLUME = new Attr.FloatAttr("sound.volume", 1.0F, 0.0F, 8.0F);
 	public static final Attr.FloatAttr SOUND_PITCH = new Attr.FloatAttr("sound.pitch", 1.0F, 0.5F, 2.0F);

@@ -60,6 +60,7 @@ public class MagicFirework implements ModInitializer {
 				.register(entries -> {
 					entries.accept(ModRegistries.defaultStack());
 					entries.accept(ModRegistries.defaultBlueprint());
+					entries.accept(ModRegistries.FIREWORK_CRAFTING_TABLE_ITEM);
 				});
 		FireworkCommand.init();
 

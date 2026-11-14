@@ -4,18 +4,18 @@ import com.magic.firework.MagicFirework;
 import com.magic.firework.core.eval.FrameStream;
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
+import com.magic.firework.blockentity.FireworkCraftingTableBlockEntity;
 import com.magic.firework.entity.MagicFireworkEntity;
 import com.magic.firework.platform.CloudProtocol;
+import com.magic.firework.platform.FireworkRuntime;
+import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.screen.FireworkEditorMenu;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -35,26 +35,34 @@ public final class FireworkNetworking {
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
-	/** Client -> server: open the firework editor menu. */
-	public static final ResourceLocation OPEN_EDITOR_CHANNEL = MagicFirework.id("open_editor");
+	/** Client -> server: move one step along the speed / flight-time scale. */
+	public static final ResourceLocation ADJUST_FLIGHT_CHANNEL = MagicFirework.id("adjust_flight");
 
 	private FireworkNetworking() {
 	}
 
 	public static void init() {
-		ServerPlayNetworking.registerGlobalReceiver(OPEN_EDITOR_CHANNEL,
-				(server, player, handler, buf, responseSender) -> server.execute(() -> player.openMenu(
-						new SimpleMenuProvider((containerId, inventory, p) -> new FireworkEditorMenu(containerId, inventory),
-								Component.translatable("screen.magic-firework.editor.title")))));
-
-		// Save a firework left in the editor when the player quits/disconnects with the menu
-		// still open. This fires before PlayerList.remove saves the player, so the firework
-		// persists instead of being dropped by the (too-late) menu removed() callback.
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-			if (handler.player.containerMenu instanceof FireworkEditorMenu menu) {
-				menu.saveContents(handler.player);
-			}
-		});
+		// The flight page is part of the editor screen, so adjusting does not reopen a menu —
+		// the updated firework simply syncs back through the already-open container. The
+		// server validates every step: it re-reads the firework and consumes/refunds the
+		// material itself, so a forged packet can only move within the allowed range.
+		ServerPlayNetworking.registerGlobalReceiver(ADJUST_FLIGHT_CHANNEL,
+				(server, player, handler, buf, responseSender) -> {
+					if (buf.readableBytes() < 2) {
+						return;
+					}
+					int which = buf.readByte();
+					int delta = buf.readByte();
+					server.execute(() -> {
+						if (player.containerMenu instanceof FireworkEditorMenu menu
+								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
+							FireworkRuntime runtime = RuntimeRegistry.current();
+							if (runtime != null) {
+								table.adjustFlight(runtime.definitions(), player, which, delta);
+							}
+						}
+					});
+				});
 	}
 
 	public static void sendProfile(ServerPlayer player, MagicFireworkEntity entity) {
