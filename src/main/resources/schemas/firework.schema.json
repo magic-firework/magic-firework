@@ -183,9 +183,9 @@
           "enum": ["launch", "await", "set", "burst", "call", "spawn", "sound", "light", "end"]
         },
         "direction": {
-          "enum": ["up", "look", "vector"],
+          "enum": ["up", "look", "vector", "relative"],
           "default": "up",
-          "description": "launch only. An attribute override wins when flight.direction.mode is set."
+          "description": "launch only. An attribute override wins when flight.direction.mode is set. relative reads flight.direction.yaw/pitch from the launcher's heading."
         },
         "vector": {
           "$ref": "./common.schema.json#/$defs/vec3",

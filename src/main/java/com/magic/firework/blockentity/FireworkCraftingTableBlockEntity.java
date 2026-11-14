@@ -40,6 +40,8 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	/** One string raises {@link Attributes#FUSE_TICKS} (flight time) by this many ticks. */
 	public static final Item FUSE_MATERIAL = Items.STRING;
 	public static final int FUSE_PER_ITEM = 20;
+	/** Degrees per press on the direction page. */
+	public static final int DIRECTION_STEP_DEGREES = 15;
 
 	private NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
 
@@ -84,6 +86,96 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	public int effectiveFuse(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
 		return resolved == null ? 0 : Attributes.FUSE_TICKS.get(effective(resolved));
+	}
+
+	// ── direction angles ─────────────────────────────────────────────────────
+
+	public float effectiveYaw(Definitions definitions) {
+		FireworkDataHelper.Resolved resolved = resolve(definitions);
+		if (resolved == null) {
+			return 0.0F;
+		}
+		AttributeBag bag = effective(resolved);
+		return bag.has(Attributes.DIRECTION_YAW.key())
+				? Attributes.DIRECTION_YAW.get(bag)
+				: deriveYaw(bag);
+	}
+
+	public float effectivePitch(Definitions definitions) {
+		FireworkDataHelper.Resolved resolved = resolve(definitions);
+		if (resolved == null) {
+			return 0.0F;
+		}
+		AttributeBag bag = effective(resolved);
+		return bag.has(Attributes.DIRECTION_PITCH.key())
+				? Attributes.DIRECTION_PITCH.get(bag)
+				: derivePitch(bag);
+	}
+
+	/**
+	 * Turns one of the direction dials and stores the angles on the firework.
+	 *
+	 * <p>The angles are relative to whoever launches the rocket: horizontal 0–360 (0° is straight
+	 * ahead, growing toward their right) and vertical 0–180 (the polar angle from world up:
+	 * 0° = up, 180° = down). The world vector is resolved at launch, so the same firework flies
+	 * in the same relative direction wherever the player stands.
+	 *
+	 * @param which {@link FireworkEditorMenu#ADJUST_YAW} or {@link FireworkEditorMenu#ADJUST_PITCH}
+	 * @param delta degrees to add, normally ±{@link #DIRECTION_STEP_DEGREES}
+	 */
+	public void adjustDirection(Definitions definitions, int which, int delta) {
+		FireworkDataHelper.Resolved resolved = resolve(definitions);
+		if (resolved == null || (which != FireworkEditorMenu.ADJUST_YAW
+				&& which != FireworkEditorMenu.ADJUST_PITCH)) {
+			return;
+		}
+		// A step never exceeds one dial press, whatever a forged packet asks for.
+		int step = Math.max(-DIRECTION_STEP_DEGREES, Math.min(DIRECTION_STEP_DEGREES, delta));
+		if (step == 0) {
+			return;
+		}
+		float yaw = effectiveYaw(definitions);
+		float pitch = effectivePitch(definitions);
+		if (which == FireworkEditorMenu.ADJUST_YAW) {
+			yaw = clampYaw(yaw + step);
+		} else {
+			pitch = clampPitch(pitch + step);
+		}
+
+		// The launch resolves the vector from the player's heading, so no world vector here —
+		// drop any stale one to keep the item's data honest.
+		AttributeBag overlay = resolved.overlay()
+				.withString(Attributes.DIRECTION_MODE.key(), "relative")
+				.withFloat(Attributes.DIRECTION_YAW.key(), yaw)
+				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch)
+				.without(Attributes.DIRECTION_X.key())
+				.without(Attributes.DIRECTION_Y.key())
+				.without(Attributes.DIRECTION_Z.key());
+
+		ItemStack firework = getItem(SLOT_FIREWORK);
+		FireworkDataHelper.setOverlay(firework, overlay);
+		setItem(SLOT_FIREWORK, firework);
+	}
+
+	private static float deriveYaw(AttributeBag bag) {
+		float x = Attributes.DIRECTION_X.get(bag);
+		float z = Attributes.DIRECTION_Z.get(bag);
+		float degrees = (float) Math.toDegrees(Math.atan2(z, x));
+		return (degrees + 360.0F) % 360.0F;
+	}
+
+	private static float derivePitch(AttributeBag bag) {
+		// Polar angle from +Y: 0° is straight up.
+		float y = Math.max(-1.0F, Math.min(1.0F, Attributes.DIRECTION_Y.get(bag)));
+		return (float) Math.toDegrees(Math.acos(y));
+	}
+
+	private static float clampYaw(float value) {
+		return Math.max(0.0F, Math.min(360.0F, value));
+	}
+
+	private static float clampPitch(float value) {
+		return Math.max(0.0F, Math.min(180.0F, value));
 	}
 
 	/**

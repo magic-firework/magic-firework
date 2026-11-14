@@ -19,7 +19,9 @@
   "screen.magic-firework.flight.speed_hint": "Add or remove gunpowder",
   "screen.magic-firework.flight.fuse": "Flight time",
   "screen.magic-firework.flight.fuse_hint": "Add or remove string",
-  "screen.magic-firework.flight.back": "Back",
+  "screen.magic-firework.direction.horizontal": "Horizontal",
+  "screen.magic-firework.direction.vertical": "Vertical",
+  "screen.magic-firework.editor.back": "Back",
 
   "attr.magic-firework.flight.speed": "Speed",
   "attr.magic-firework.flight.gravity": "Gravity",
@@ -37,7 +39,7 @@
   "screen.magic-firework.editor.slot.color": "Color",
   "screen.magic-firework.editor.slot.effect": "Effect",
   "screen.magic-firework.editor.slot.flight": "Flight",
-  "screen.magic-firework.editor.slot.fuse": "Flight time",
+  "screen.magic-firework.editor.slot.direction": "Direction",
   "screen.magic-firework.editor.slot.sound": "Sound",
   "screen.magic-firework.editor.slot.light": "Light",
   "screen.magic-firework.editor.slot.trail": "Trail"

@@ -31,6 +31,9 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     /** Which value the flight page's steppers adjust. */
     public static final int ADJUST_SPEED = 0;
     public static final int ADJUST_FUSE = 1;
+    /** Which dial the direction page's steppers turn. */
+    public static final int ADJUST_YAW = 0;
+    public static final int ADJUST_PITCH = 1;
 
     public static final int CENTER_SLOT = 0;
     private static final int INV_START = 1;
@@ -42,12 +45,14 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     public static final int CENTER_X = 43;
     public static final int CENTER_Y = 107;
 
-    // Synced display values: current speed (milli-units) and flight time (ticks).
+    // Synced display values: speed (milli-units), flight time (ticks), yaw / pitch (milli-degrees).
     private static final int DATA_SPEED = 0;
     private static final int DATA_FUSE = 1;
+    private static final int DATA_YAW = 2;
+    private static final int DATA_PITCH = 3;
 
     private final Container center;
-    private final SimpleContainerData flightData = new SimpleContainerData(2);
+    private final SimpleContainerData editorData = new SimpleContainerData(4);
 
     public FireworkEditorMenu(int containerId, Inventory playerInventory) {
         this(containerId, playerInventory, new SimpleContainer(3));
@@ -56,7 +61,7 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
     public FireworkEditorMenu(int containerId, Inventory playerInventory, Container center) {
         super(ModRegistries.FIREWORK_EDITOR_MENU, containerId);
         this.center = center;
-        this.addDataSlots(this.flightData);
+        this.addDataSlots(this.editorData);
 
         this.addSlot(new Slot(center, CENTER_SLOT, CENTER_X, CENTER_Y) {
             @Override
@@ -93,19 +98,29 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
             FireworkRuntime runtime = RuntimeRegistry.current();
             if (runtime != null) {
                 Definitions definitions = runtime.definitions();
-                this.flightData.set(DATA_SPEED, Math.round(table.effectiveSpeed(definitions) * 1000.0F));
-                this.flightData.set(DATA_FUSE, table.effectiveFuse(definitions));
+                this.editorData.set(DATA_SPEED, Math.round(table.effectiveSpeed(definitions) * 1000.0F));
+                this.editorData.set(DATA_FUSE, table.effectiveFuse(definitions));
+                this.editorData.set(DATA_YAW, Math.round(table.effectiveYaw(definitions) * 1000.0F));
+                this.editorData.set(DATA_PITCH, Math.round(table.effectivePitch(definitions) * 1000.0F));
             }
         }
         super.broadcastChanges();
     }
 
     public float displayedSpeed() {
-        return this.flightData.get(DATA_SPEED) / 1000.0F;
+        return this.editorData.get(DATA_SPEED) / 1000.0F;
     }
 
     public int displayedFuse() {
-        return this.flightData.get(DATA_FUSE);
+        return this.editorData.get(DATA_FUSE);
+    }
+
+    public float displayedYaw() {
+        return this.editorData.get(DATA_YAW) / 1000.0F;
+    }
+
+    public float displayedPitch() {
+        return this.editorData.get(DATA_PITCH) / 1000.0F;
     }
 
     // ── slot routing ─────────────────────────────────────────────────────────

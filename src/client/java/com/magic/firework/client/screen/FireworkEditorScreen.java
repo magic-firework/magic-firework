@@ -31,11 +31,22 @@ import net.minecraft.world.item.Items;
 /**
  * The firework editor screen.
  *
- * <p>Both pages live in one screen: the main page shows the firework and the category grid,
- * the flight page shows the speed / flight-time steppers. Switching pages cross-fades
- * between them instead of opening a new screen, so the mouse cursor never jumps.
+ * <p>Every page lives in one screen: the main page shows the firework and the category grid, the
+ * flight page shows the speed / flight-time steppers, and the direction page shows two dials plus
+ * a single preview arrow for the resulting spherical direction. Switching pages cross-fades
+ * instead of opening a new screen, so the mouse cursor never jumps.
  */
 public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditorMenu> {
+    private enum Page {
+        MAIN,
+        FLIGHT,
+        DIRECTION
+    }
+
+    /** Long-press channel: which packet a held stepper keeps sending. */
+    private static final int CHANNEL_FLIGHT = 0;
+    private static final int CHANNEL_DIRECTION = 1;
+
     private static final int IMAGE_W = 380;
     private static final int IMAGE_H = 260;
 
@@ -48,15 +59,23 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     private static final int ATTR_COL_GAP = 192;
     private static final int ATTR_ROW_GAP = 10;
 
-    /** Flight page rows: label, value, then the minus / plus steppers. */
+    /** Sub-page rows: label, value, then the minus / plus steppers. */
     private static final int ROW_LABEL_X = 176;
     private static final int ROW_VALUE_X = 252;
     private static final int STEP_MINUS_X = 292;
     private static final int STEP_PLUS_X = 316;
     private static final int STEP_BTN_W = 18;
     private static final int STEP_BTN_H = 16;
-    private static final int SPEED_ROW_Y = 78;
-    private static final int FUSE_ROW_Y = 126;
+    private static final int ROW1_Y = 78;
+    private static final int ROW2_Y = 126;
+
+    /** Direction preview: one arrow from the origin, on a fixed-radius sphere. */
+    private static final int ORIGIN_X = 128;
+    private static final int ORIGIN_Y = 118;
+    private static final int ARROW_RADIUS = 36;
+
+    /** Degrees per direction-dial press, shared with the server-side validation. */
+    private static final int DIRECTION_STEP = FireworkCraftingTableBlockEntity.DIRECTION_STEP_DEGREES;
 
     private static final int BACK_X = 42;
     private static final int BACK_Y = 150;
@@ -64,13 +83,14 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     private static final int BACK_H = 20;
 
     private static final String FLIGHT_LABEL = "screen.magic-firework.editor.slot.flight";
+    private static final String DIRECTION_LABEL = "screen.magic-firework.editor.slot.direction";
 
     private static final List<Category> CATEGORIES = List.of(
             new Category("screen.magic-firework.editor.slot.shape", new ItemStack(Items.FIREWORK_STAR)),
             new Category("screen.magic-firework.editor.slot.color", new ItemStack(Items.RED_DYE)),
             new Category("screen.magic-firework.editor.slot.effect", new ItemStack(Items.FIREWORK_ROCKET)),
             new Category(FLIGHT_LABEL, new ItemStack(Items.FEATHER)),
-            new Category("screen.magic-firework.editor.slot.fuse", new ItemStack(Items.STRING)),
+            new Category(DIRECTION_LABEL, new ItemStack(Items.COMPASS)),
             new Category("screen.magic-firework.editor.slot.sound", new ItemStack(Items.NOTE_BLOCK)),
             new Category("screen.magic-firework.editor.slot.light", new ItemStack(Items.GLOWSTONE)),
             new Category("screen.magic-firework.editor.slot.trail", new ItemStack(Items.GUNPOWDER)));
@@ -82,17 +102,23 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     /** 0 → surrounding slots hidden, 1 → fully revealed. */
     private float reveal;
 
-    /** True while the flight page is showing. */
-    private boolean flightPage;
+    /** Page being navigated to; the preview of the old page stays until the fade ends. */
+    private Page page = Page.MAIN;
+    private Page shownPage = Page.MAIN;
 
-    /** 0 → main page, 1 → flight page. Eased each tick for the page transition. */
+    /** 0 → main page, 1 → sub-page. Eased each tick for the page transition. */
     private float pageProgress;
+
+    /** Eased arrow angles, so the preview rotates smoothly toward the adjusted value. */
+    private float shownYaw;
+    private float shownPitch = 90.0F;
 
     /** Long-press auto-repeat: wait this many ticks before repeating, then this often. */
     private static final int HOLD_DELAY_TICKS = 8;
     private static final int HOLD_REPEAT_TICKS = 2;
 
-    /** The stepper currently held down, or {@code -1}. {@code heldDelta} is +1 or -1. */
+    /** The stepper currently held down, or {@code -1}. */
+    private int heldChannel = -1;
     private int heldWhich = -1;
     private int heldDelta;
     private int heldTicks;
@@ -117,13 +143,18 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     protected void containerTick() {
         super.containerTick();
 
-        // Taking the firework out ends the flight page; nothing is left to edit on it.
-        if (flightPage && this.menu.getCenterStack().isEmpty()) {
-            flightPage = false;
+        // Taking the firework out ends the sub-page; nothing is left to edit on it.
+        if (page != Page.MAIN && this.menu.getCenterStack().isEmpty()) {
+            page = Page.MAIN;
         }
 
-        pageProgress = ease(pageProgress, flightPage ? 1.0F : 0.0F);
-        reveal = ease(reveal, !flightPage && !this.menu.getCenterStack().isEmpty() ? 1.0F : 0.0F);
+        pageProgress = ease(pageProgress, page == Page.MAIN ? 0.0F : 1.0F);
+        if (page == Page.MAIN && pageProgress <= 0.001F) {
+            shownPage = Page.MAIN;
+        }
+        reveal = ease(reveal, page == Page.MAIN && !this.menu.getCenterStack().isEmpty() ? 1.0F : 0.0F);
+        shownYaw = ease(shownYaw, this.menu.displayedYaw());
+        shownPitch = ease(shownPitch, this.menu.displayedPitch());
         tickHold();
     }
 
@@ -132,17 +163,18 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
      * the button, or the value can no longer move that way (max reached, material used up).
      */
     private void tickHold() {
-        if (heldWhich < 0) {
+        if (heldChannel < 0) {
             return;
         }
-        if (!flightInteractive() || !isOverHeldButton(this.cursorX, this.cursorY)
-                || !stepAvailable(heldWhich, heldDelta)) {
+        if (!subInteractive() || !isOverHeldButton(this.cursorX, this.cursorY)
+                || !stepAvailable(heldChannel, heldWhich, heldDelta)) {
+            heldChannel = -1;
             heldWhich = -1;
             return;
         }
         if (++heldTicks >= HOLD_DELAY_TICKS
                 && (heldTicks - HOLD_DELAY_TICKS) % HOLD_REPEAT_TICKS == 0) {
-            sendAdjust(heldWhich, heldDelta);
+            sendAdjust(heldChannel, heldWhich, heldDelta);
         }
     }
 
@@ -157,25 +189,25 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         return Math.max(0.0F, 1.0F - pageProgress * 2.0F);
     }
 
-    /** The flight page fades in over the second half, so the two pages never overlap. */
-    private float flightAlpha() {
+    /** The sub-page fades in over the second half, so the two pages never overlap. */
+    private float subAlpha() {
         return Math.max(0.0F, pageProgress * 2.0F - 1.0F);
     }
 
-    private boolean flightInteractive() {
-        return flightPage && pageProgress > 0.9F;
+    private boolean subInteractive() {
+        return page != Page.MAIN && pageProgress > 0.9F;
     }
 
     private boolean mainInteractive() {
-        return !flightPage && pageProgress < 0.1F;
+        return page == Page.MAIN && pageProgress < 0.1F;
     }
 
     private int categorySlide() {
         return Math.round((1.0F - mainAlpha()) * 12.0F);
     }
 
-    private int flightSlide() {
-        return Math.round((1.0F - flightAlpha()) * 12.0F);
+    private int subSlide() {
+        return Math.round((1.0F - subAlpha()) * 12.0F);
     }
 
     @Override
@@ -213,8 +245,12 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         if (mainAlpha() > 0.02F) {
             renderMainPage(g, x, y, center, mouseX, mouseY);
         }
-        if (flightAlpha() > 0.02F) {
-            renderFlightPage(g, x, y, mouseX, mouseY);
+        if (subAlpha() > 0.02F) {
+            if (shownPage == Page.DIRECTION) {
+                renderDirectionPage(g, x, y, mouseX, mouseY);
+            } else {
+                renderFlightPage(g, x, y, mouseX, mouseY);
+            }
         }
     }
 
@@ -248,8 +284,8 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     }
 
     private void renderFlightPage(GuiGraphics g, int x, int y, int mouseX, int mouseY) {
-        int alpha = (int) (flightAlpha() * 255);
-        int slide = flightSlide();
+        int alpha = (int) (subAlpha() * 255);
+        int slide = subSlide();
         int labelColor = (alpha << 24) | 0xC8C8C8;
         int hintColor = (alpha << 24) | 0x8B8B8B;
         int valueColor = (alpha << 24) | 0xFFFFFF;
@@ -258,39 +294,193 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         int fuse = this.menu.displayedFuse();
 
         g.drawString(this.font, Component.translatable("screen.magic-firework.flight.speed"),
-                x + ROW_LABEL_X + slide, y + SPEED_ROW_Y, labelColor);
+                x + ROW_LABEL_X + slide, y + ROW1_Y, labelColor);
         g.drawString(this.font, Component.translatable("screen.magic-firework.flight.speed_hint"),
-                x + ROW_LABEL_X + slide, y + SPEED_ROW_Y + 13, hintColor);
+                x + ROW_LABEL_X + slide, y + ROW1_Y + 13, hintColor);
         g.drawString(this.font, String.format(Locale.ROOT, "%.2f", speed),
-                x + ROW_VALUE_X + slide, y + SPEED_ROW_Y, valueColor);
-        boolean interactive = flightInteractive();
+                x + ROW_VALUE_X + slide, y + ROW1_Y, valueColor);
+        boolean interactive = subInteractive();
         boolean speedDown = canDecreaseSpeed();
         boolean speedUp = canIncreaseSpeed();
-        drawStepButton(g, x + STEP_MINUS_X + slide, y + SPEED_ROW_Y - 4, "-", speedDown,
-                interactive && speedDown && isHovering(STEP_MINUS_X + slide, SPEED_ROW_Y - 4,
+        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW1_Y - 4, "-", speedDown,
+                interactive && speedDown && isHovering(STEP_MINUS_X + slide, ROW1_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
-        drawStepButton(g, x + STEP_PLUS_X + slide, y + SPEED_ROW_Y - 4, "+", speedUp,
-                interactive && speedUp && isHovering(STEP_PLUS_X + slide, SPEED_ROW_Y - 4,
+        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW1_Y - 4, "+", speedUp,
+                interactive && speedUp && isHovering(STEP_PLUS_X + slide, ROW1_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
 
         g.drawString(this.font, Component.translatable("screen.magic-firework.flight.fuse"),
-                x + ROW_LABEL_X + slide, y + FUSE_ROW_Y, labelColor);
+                x + ROW_LABEL_X + slide, y + ROW2_Y, labelColor);
         g.drawString(this.font, Component.translatable("screen.magic-firework.flight.fuse_hint"),
-                x + ROW_LABEL_X + slide, y + FUSE_ROW_Y + 13, hintColor);
+                x + ROW_LABEL_X + slide, y + ROW2_Y + 13, hintColor);
         g.drawString(this.font, secondsText(fuse),
-                x + ROW_VALUE_X + slide, y + FUSE_ROW_Y, valueColor);
+                x + ROW_VALUE_X + slide, y + ROW2_Y, valueColor);
         boolean fuseDown = canDecreaseFuse();
         boolean fuseUp = canIncreaseFuse();
-        drawStepButton(g, x + STEP_MINUS_X + slide, y + FUSE_ROW_Y - 4, "-", fuseDown,
-                interactive && fuseDown && isHovering(STEP_MINUS_X + slide, FUSE_ROW_Y - 4,
+        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW2_Y - 4, "-", fuseDown,
+                interactive && fuseDown && isHovering(STEP_MINUS_X + slide, ROW2_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
-        drawStepButton(g, x + STEP_PLUS_X + slide, y + FUSE_ROW_Y - 4, "+", fuseUp,
-                interactive && fuseUp && isHovering(STEP_PLUS_X + slide, FUSE_ROW_Y - 4,
+        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW2_Y - 4, "+", fuseUp,
+                interactive && fuseUp && isHovering(STEP_PLUS_X + slide, ROW2_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
 
+        drawBackButton(g, x, y, alpha, interactive, mouseX, mouseY);
+    }
+
+    private void renderDirectionPage(GuiGraphics g, int x, int y, int mouseX, int mouseY) {
+        int alpha = (int) (subAlpha() * 255);
+        int slide = subSlide();
+        int labelColor = (alpha << 24) | 0xC8C8C8;
+        int valueColor = (alpha << 24) | 0xFFFFFF;
+
+        drawDirectionArrow(g, x, y, alpha);
+
+        g.drawString(this.font, Component.translatable("screen.magic-firework.direction.horizontal"),
+                x + ROW_LABEL_X + slide, y + ROW1_Y, labelColor);
+        g.drawString(this.font, degreesText(this.menu.displayedYaw()),
+                x + ROW_VALUE_X + slide, y + ROW1_Y, valueColor);
+        boolean interactive = subInteractive();
+        boolean yawDown = canDecreaseYaw();
+        boolean yawUp = canIncreaseYaw();
+        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW1_Y - 4, "-", yawDown,
+                interactive && yawDown && isHovering(STEP_MINUS_X + slide, ROW1_Y - 4,
+                        STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
+        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW1_Y - 4, "+", yawUp,
+                interactive && yawUp && isHovering(STEP_PLUS_X + slide, ROW1_Y - 4,
+                        STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
+
+        g.drawString(this.font, Component.translatable("screen.magic-firework.direction.vertical"),
+                x + ROW_LABEL_X + slide, y + ROW2_Y, labelColor);
+        g.drawString(this.font, degreesText(this.menu.displayedPitch()),
+                x + ROW_VALUE_X + slide, y + ROW2_Y, valueColor);
+        boolean pitchDown = canDecreasePitch();
+        boolean pitchUp = canIncreasePitch();
+        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW2_Y - 4, "-", pitchDown,
+                interactive && pitchDown && isHovering(STEP_MINUS_X + slide, ROW2_Y - 4,
+                        STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
+        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW2_Y - 4, "+", pitchUp,
+                interactive && pitchUp && isHovering(STEP_PLUS_X + slide, ROW2_Y - 4,
+                        STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
+
+        drawBackButton(g, x, y, alpha, interactive, mouseX, mouseY);
+    }
+
+    private void drawBackButton(GuiGraphics g, int x, int y, int alpha, boolean interactive, int mouseX, int mouseY) {
         boolean backHover = interactive && isHovering(BACK_X, BACK_Y, BACK_W, BACK_H, mouseX, mouseY);
         drawTextButton(g, x + BACK_X, y + BACK_Y, BACK_W, BACK_H,
-                Component.translatable("screen.magic-firework.flight.back"), backHover, alpha);
+                Component.translatable("screen.magic-firework.editor.back"), backHover, alpha);
+    }
+
+    /**
+     * One arrow for the spherical direction. Both angles only choose where it points; it always
+     * has the same length, so it shows direction without implying a magnitude.
+     */
+    private void drawDirectionArrow(GuiGraphics g, int x, int y, int alpha) {
+        int ox = x + ORIGIN_X;
+        int oy = y + ORIGIN_Y;
+        int guide = ((alpha / 4) << 24) | 0x9A9AA4;
+
+        drawAxes(g, ox, oy, alpha);
+        // Fixed horizontal circle, plus a vertical circle that turns with the arrow's azimuth.
+        drawEquator(g, ox, oy, guide);
+        drawMeridian(g, ox, oy, Math.toRadians(this.shownYaw), guide);
+
+        double yaw = Math.toRadians(this.shownYaw);
+        double polar = Math.toRadians(this.shownPitch);
+        double horizontal = Math.sin(polar);
+        double vx = horizontal * Math.cos(yaw);
+        double vy = Math.cos(polar);
+        double vz = horizontal * Math.sin(yaw);
+
+        int tx = ox + (int) Math.round(projectX(vx, vz) * ARROW_RADIUS);
+        int ty = oy + (int) Math.round(projectY(vx, vy, vz) * ARROW_RADIUS);
+        drawArrow(g, ox, oy, tx, ty, (alpha << 24) | 0x4DD0E1);
+
+        g.fill(ox - 1, oy - 1, ox + 2, oy + 2, (alpha << 24) | 0xFFFFFF);
+    }
+
+    /**
+     * The 3D coordinate reference, drawn in the editor's Z-up frame: X and Y span the horizontal
+     * plane, Z points up. The item still stores the launch vector in Minecraft's Y-up axes, where
+     * the editor's Y is {@code z} and its Z is {@code y}.
+     */
+    private void drawAxes(GuiGraphics g, int ox, int oy, int alpha) {
+        int a = (int) (alpha * 0.7F);
+        drawAxis(g, ox, oy, 1.0, 0.0, 0.0, (a << 24) | 0xE57373, "X", 3, -3);
+        drawAxis(g, ox, oy, 0.0, 0.0, 1.0, (a << 24) | 0x81C784, "Y", -9, -3);
+        drawAxis(g, ox, oy, 0.0, 1.0, 0.0, (a << 24) | 0x64B5F6, "Z", 3, -8);
+    }
+
+    private void drawAxis(GuiGraphics g, int ox, int oy, double x, double y, double z, int color,
+            String label, int labelX, int labelY) {
+        int tx = ox + (int) Math.round(projectX(x, z) * ARROW_RADIUS);
+        int ty = oy + (int) Math.round(projectY(x, y, z) * ARROW_RADIUS);
+        drawLine(g, ox, oy, tx, ty, color);
+        g.drawString(this.font, label, tx + labelX, ty + labelY, color);
+    }
+
+    /** The fixed horizontal reference circle. */
+    private static void drawEquator(GuiGraphics g, int ox, int oy, int color) {
+        int steps = 48;
+        for (int i = 0; i < steps; i++) {
+            double angle = i * Math.PI * 2.0 / steps;
+            plot(g, ox, oy, Math.cos(angle), 0.0, Math.sin(angle), color);
+        }
+    }
+
+    /**
+     * The vertical reference circle, in the plane that contains the arrow's horizontal direction,
+     * so it swings around the vertical axis together with the arrow.
+     */
+    private static void drawMeridian(GuiGraphics g, int ox, int oy, double yawRadians, int color) {
+        double ux = Math.cos(yawRadians);
+        double uz = Math.sin(yawRadians);
+        int steps = 48;
+        for (int i = 0; i < steps; i++) {
+            double angle = i * Math.PI * 2.0 / steps;
+            double horizontal = Math.cos(angle);
+            plot(g, ox, oy, ux * horizontal, Math.sin(angle), uz * horizontal, color);
+        }
+    }
+
+    private static void plot(GuiGraphics g, int ox, int oy, double x, double y, double z, int color) {
+        int px = ox + (int) Math.round(projectX(x, z) * ARROW_RADIUS);
+        int py = oy + (int) Math.round(projectY(x, y, z) * ARROW_RADIUS);
+        g.fill(px, py, px + 1, py + 1, color);
+    }
+
+    /** Isometric-ish camera: +X down-right, +Z down-left, +Y up. */
+    private static double projectX(double x, double z) {
+        return 0.70710678 * (x - z);
+    }
+
+    private static double projectY(double x, double y, double z) {
+        return 0.35355339 * (x + z) - 0.8660254 * y;
+    }
+
+    private static void drawArrow(GuiGraphics g, int ox, int oy, int tx, int ty, int color) {
+        drawLine(g, ox, oy, tx, ty, color);
+        double angle = Math.atan2(ty - oy, tx - ox);
+        double head = 7.0;
+        for (double spread : new double[] { Math.PI - 0.45, Math.PI + 0.45 }) {
+            int hx = tx + (int) Math.round(Math.cos(angle + spread) * head);
+            int hy = ty + (int) Math.round(Math.sin(angle + spread) * head);
+            drawLine(g, tx, ty, hx, hy, color);
+        }
+    }
+
+    private static void drawLine(GuiGraphics g, int x0, int y0, int x1, int y1, int color) {
+        int steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+        if (steps == 0) {
+            g.fill(x0, y0, x0 + 2, y0 + 2, color);
+            return;
+        }
+        for (int i = 0; i <= steps; i++) {
+            float t = i / (float) steps;
+            int px = Math.round(x0 + (x1 - x0) * t);
+            int py = Math.round(y0 + (y1 - y0) * t);
+            g.fill(px, py, px + 2, py + 2, color);
+        }
     }
 
     @Override
@@ -303,12 +493,12 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         if (button == 0) {
             this.cursorX = mouseX;
             this.cursorY = mouseY;
-            if (flightInteractive()) {
-                if (pressStep(mouseX, mouseY)) {
+            if (subInteractive()) {
+                if (shownPage == Page.DIRECTION ? pressDirectionStep(mouseX, mouseY) : pressFlightStep(mouseX, mouseY)) {
                     return true;
                 }
                 if (isHovering(BACK_X, BACK_Y, BACK_W, BACK_H, mouseX, mouseY)) {
-                    flightPage = false;
+                    page = Page.MAIN;
                     return true;
                 }
             }
@@ -328,6 +518,7 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (button == 0) {
+            heldChannel = -1;
             heldWhich = -1;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -340,56 +531,77 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         super.mouseMoved(mouseX, mouseY);
     }
 
-    /** A press on a stepper applies one step at once and arms the hold. */
-    private boolean pressStep(double mouseX, double mouseY) {
-        int slide = flightSlide();
-        if (tryStep(mouseX, mouseY, FireworkEditorMenu.ADJUST_SPEED, SPEED_ROW_Y, slide,
-                canDecreaseSpeed(), canIncreaseSpeed())) {
+    /** A press on a flight stepper applies one step at once and arms the hold. */
+    private boolean pressFlightStep(double mouseX, double mouseY) {
+        int slide = subSlide();
+        if (tryStep(mouseX, mouseY, CHANNEL_FLIGHT, FireworkEditorMenu.ADJUST_SPEED, ROW1_Y, slide,
+                canDecreaseSpeed(), canIncreaseSpeed(), 1)) {
             return true;
         }
-        return tryStep(mouseX, mouseY, FireworkEditorMenu.ADJUST_FUSE, FUSE_ROW_Y, slide,
-                canDecreaseFuse(), canIncreaseFuse());
+        return tryStep(mouseX, mouseY, CHANNEL_FLIGHT, FireworkEditorMenu.ADJUST_FUSE, ROW2_Y, slide,
+                canDecreaseFuse(), canIncreaseFuse(), 1);
     }
 
-    private boolean tryStep(double mouseX, double mouseY, int which, int rowY, int slide,
-            boolean canDecrease, boolean canIncrease) {
+    /** A press on a direction stepper turns one dial by {@link #DIRECTION_STEP}. */
+    private boolean pressDirectionStep(double mouseX, double mouseY) {
+        int slide = subSlide();
+        if (tryStep(mouseX, mouseY, CHANNEL_DIRECTION, FireworkEditorMenu.ADJUST_YAW, ROW1_Y, slide,
+                canDecreaseYaw(), canIncreaseYaw(), DIRECTION_STEP)) {
+            return true;
+        }
+        return tryStep(mouseX, mouseY, CHANNEL_DIRECTION, FireworkEditorMenu.ADJUST_PITCH, ROW2_Y, slide,
+                canDecreasePitch(), canIncreasePitch(), DIRECTION_STEP);
+    }
+
+    private boolean tryStep(double mouseX, double mouseY, int channel, int which, int rowY, int slide,
+            boolean canDecrease, boolean canIncrease, int step) {
         int top = rowY - 4;
         if (canDecrease && isHovering(STEP_MINUS_X + slide, top, STEP_BTN_W, STEP_BTN_H, mouseX, mouseY)) {
-            beginHold(which, -1);
+            beginHold(channel, which, -step);
             return true;
         }
         if (canIncrease && isHovering(STEP_PLUS_X + slide, top, STEP_BTN_W, STEP_BTN_H, mouseX, mouseY)) {
-            beginHold(which, 1);
+            beginHold(channel, which, step);
             return true;
         }
         return false;
     }
 
-    private void beginHold(int which, int delta) {
+    private void beginHold(int channel, int which, int delta) {
+        heldChannel = channel;
         heldWhich = which;
         heldDelta = delta;
         heldTicks = 0;
-        sendAdjust(which, delta);
+        sendAdjust(channel, which, delta);
     }
 
     private boolean isOverHeldButton(double mouseX, double mouseY) {
-        int rowY = heldWhich == FireworkEditorMenu.ADJUST_SPEED ? SPEED_ROW_Y : FUSE_ROW_Y;
-        int bx = (heldDelta > 0 ? STEP_PLUS_X : STEP_MINUS_X) + flightSlide();
+        int rowY = heldWhich == FireworkEditorMenu.ADJUST_SPEED || heldWhich == FireworkEditorMenu.ADJUST_YAW
+                ? ROW1_Y : ROW2_Y;
+        int bx = (heldDelta > 0 ? STEP_PLUS_X : STEP_MINUS_X) + subSlide();
         return isHovering(bx, rowY - 4, STEP_BTN_W, STEP_BTN_H, mouseX, mouseY);
     }
 
-    private boolean stepAvailable(int which, int delta) {
-        if (which == FireworkEditorMenu.ADJUST_SPEED) {
-            return delta > 0 ? canIncreaseSpeed() : canDecreaseSpeed();
+    private boolean stepAvailable(int channel, int which, int delta) {
+        if (channel == CHANNEL_FLIGHT) {
+            if (which == FireworkEditorMenu.ADJUST_SPEED) {
+                return delta > 0 ? canIncreaseSpeed() : canDecreaseSpeed();
+            }
+            return delta > 0 ? canIncreaseFuse() : canDecreaseFuse();
         }
-        return delta > 0 ? canIncreaseFuse() : canDecreaseFuse();
+        if (which == FireworkEditorMenu.ADJUST_YAW) {
+            return delta > 0 ? canIncreaseYaw() : canDecreaseYaw();
+        }
+        return delta > 0 ? canIncreasePitch() : canDecreasePitch();
     }
 
-    private void sendAdjust(int which, int delta) {
+    private void sendAdjust(int channel, int which, int delta) {
         FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeByte(which);
         buf.writeByte(delta);
-        ClientPlayNetworking.send(FireworkNetworking.ADJUST_FLIGHT_CHANNEL, buf);
+        ClientPlayNetworking.send(channel == CHANNEL_FLIGHT
+                ? FireworkNetworking.ADJUST_FLIGHT_CHANNEL
+                : FireworkNetworking.ADJUST_DIRECTION_CHANNEL, buf);
     }
 
     // ── stepper availability ─────────────────────────────────────────────────
@@ -410,6 +622,22 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     private boolean canIncreaseFuse() {
         return this.menu.displayedFuse() < Attributes.FUSE_TICKS.max()
                 && hasMaterial(FireworkCraftingTableBlockEntity.FUSE_MATERIAL);
+    }
+
+    private boolean canDecreaseYaw() {
+        return this.menu.displayedYaw() > 0.01F;
+    }
+
+    private boolean canIncreaseYaw() {
+        return this.menu.displayedYaw() < 359.99F;
+    }
+
+    private boolean canDecreasePitch() {
+        return this.menu.displayedPitch() > 0.01F;
+    }
+
+    private boolean canIncreasePitch() {
+        return this.menu.displayedPitch() < 179.99F;
     }
 
     /** Creative players can raise a value without holding the material. */
@@ -442,12 +670,21 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         }
     }
 
-    /** Opens a category sub-page. Only the flight page is implemented so far. */
+    /** Opens a category sub-page. Flight and direction are implemented so far. */
     private void openCategory(Category category) {
-        if (category.labelKey().equals(FLIGHT_LABEL)) {
-            flightPage = true;
+        String key = category.labelKey();
+        if (key.equals(FLIGHT_LABEL)) {
+            page = Page.FLIGHT;
+        } else if (key.equals(DIRECTION_LABEL)) {
+            page = Page.DIRECTION;
+            // Start the preview at the stored angles instead of spinning in from zero.
+            this.shownYaw = this.menu.displayedYaw();
+            this.shownPitch = this.menu.displayedPitch();
+        } else {
+            // 其他分类的编辑界面尚未设计。
+            return;
         }
-        // 其他分类的编辑界面尚未设计。
+        shownPage = page;
     }
 
     // ── rendering helpers ─────────────────────────────────────────────────────
@@ -566,6 +803,10 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     private static String secondsText(int ticks) {
         return BigDecimal.valueOf(ticks).divide(BigDecimal.valueOf(20))
                 .stripTrailingZeros().toPlainString() + "s";
+    }
+
+    private static String degreesText(float degrees) {
+        return Math.round(degrees) + "°";
     }
 
     /** A surrounding editing category: a label plus the icon drawn in its slot. */

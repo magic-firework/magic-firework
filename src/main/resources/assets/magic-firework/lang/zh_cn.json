@@ -19,7 +19,9 @@
   "screen.magic-firework.flight.speed_hint": "填充或取出火药",
   "screen.magic-firework.flight.fuse": "飞行时间",
   "screen.magic-firework.flight.fuse_hint": "填充或取出线",
-  "screen.magic-firework.flight.back": "返回",
+  "screen.magic-firework.direction.horizontal": "水平",
+  "screen.magic-firework.direction.vertical": "竖直",
+  "screen.magic-firework.editor.back": "返回",
 
   "attr.magic-firework.flight.speed": "飞行速度",
   "attr.magic-firework.flight.gravity": "重力",
@@ -37,7 +39,7 @@
   "screen.magic-firework.editor.slot.color": "颜色",
   "screen.magic-firework.editor.slot.effect": "特效",
   "screen.magic-firework.editor.slot.flight": "飞行",
-  "screen.magic-firework.editor.slot.fuse": "飞行时间",
+  "screen.magic-firework.editor.slot.direction": "方向",
   "screen.magic-firework.editor.slot.sound": "声音",
   "screen.magic-firework.editor.slot.light": "光效",
   "screen.magic-firework.editor.slot.trail": "轨迹"

@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
  * That is what keeps the interpreter testable without a running game.
  */
 public sealed interface Op {
-	/** Sets the velocity. Direction {@code up}/{@code look}/{@code vector}. */
+	/** Sets the velocity. Direction {@code up}/{@code look}/{@code vector}/{@code relative}. */
 	record Launch(Direction direction, Vec3 vector, float speed) implements Op {
 	}
 
@@ -50,7 +50,9 @@ public sealed interface Op {
 	enum Direction {
 		UP,
 		LOOK,
-		VECTOR;
+		VECTOR,
+		/** Relative to the launcher: horizontal 0° is straight ahead, read from the angle attributes. */
+		RELATIVE;
 
 		public static Direction byName(String name) {
 			if (name == null) {
@@ -59,6 +61,7 @@ public sealed interface Op {
 			return switch (name.toLowerCase(java.util.Locale.ROOT)) {
 				case "look" -> LOOK;
 				case "vector" -> VECTOR;
+				case "relative" -> RELATIVE;
 				default -> UP;
 			};
 		}

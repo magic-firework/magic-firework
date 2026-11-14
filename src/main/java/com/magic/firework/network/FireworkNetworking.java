@@ -37,6 +37,8 @@ public final class FireworkNetworking {
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
 	/** Client -> server: move one step along the speed / flight-time scale. */
 	public static final ResourceLocation ADJUST_FLIGHT_CHANNEL = MagicFirework.id("adjust_flight");
+	/** Client -> server: turn one of the direction dials. */
+	public static final ResourceLocation ADJUST_DIRECTION_CHANNEL = MagicFirework.id("adjust_direction");
 
 	private FireworkNetworking() {
 	}
@@ -59,6 +61,24 @@ public final class FireworkNetworking {
 							FireworkRuntime runtime = RuntimeRegistry.current();
 							if (runtime != null) {
 								table.adjustFlight(runtime.definitions(), player, which, delta);
+							}
+						}
+					});
+				});
+
+		ServerPlayNetworking.registerGlobalReceiver(ADJUST_DIRECTION_CHANNEL,
+				(server, player, handler, buf, responseSender) -> {
+					if (buf.readableBytes() < 2) {
+						return;
+					}
+					int which = buf.readByte();
+					int delta = buf.readByte();
+					server.execute(() -> {
+						if (player.containerMenu instanceof FireworkEditorMenu menu
+								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
+							FireworkRuntime runtime = RuntimeRegistry.current();
+							if (runtime != null) {
+								table.adjustDirection(runtime.definitions(), which, delta);
 							}
 						}
 					});
