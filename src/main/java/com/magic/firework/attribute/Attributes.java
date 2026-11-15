@@ -25,6 +25,14 @@ public final class Attributes {
 	public static final Attr.FloatAttr DIRECTION_X = new Attr.FloatAttr("flight.direction.x", 0.0F, -1.0F, 1.0F);
 	public static final Attr.FloatAttr DIRECTION_Y = new Attr.FloatAttr("flight.direction.y", 1.0F, -1.0F, 1.0F);
 	public static final Attr.FloatAttr DIRECTION_Z = new Attr.FloatAttr("flight.direction.z", 0.0F, -1.0F, 1.0F);
+	/**
+	 * The direction editor's two dials in degrees, relative to whoever launches the rocket:
+	 * horizontal 0–360 (0° is straight ahead, growing toward their right) and vertical 0–180
+	 * (the polar angle from up: 0° = up, 90° = horizontal, 180° = down). They pair with
+	 * {@code flight.direction.mode = "relative"}; the world vector is resolved at launch.
+	 */
+	public static final Attr.FloatAttr DIRECTION_YAW = new Attr.FloatAttr("flight.direction.yaw", 0.0F, 0.0F, 360.0F);
+	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 180.0F);
 
 	// ── behaviour ────────────────────────────────────────────────────────────
 	/** Explode on the first block/entity collision. */
@@ -49,8 +57,8 @@ public final class Attributes {
 	public static final String LAUNCH_SOUND = "launch.sound";
 
 	// ── op parameters ────────────────────────────────────────────────────────
-	/** Only the {@code await} immediately before a {@code burst} reads this. */
-	public static final Attr.IntAttr FUSE_TICKS = new Attr.IntAttr("fuse.ticks", 40, 1, 400);
+	/** Only the {@code await} immediately before a {@code burst} reads this; 0 bursts at once. */
+	public static final Attr.IntAttr FUSE_TICKS = new Attr.IntAttr("fuse.ticks", 40, 0, 400);
 	public static final String SOUND_ID = "sound.id";
 	public static final Attr.FloatAttr SOUND_VOLUME = new Attr.FloatAttr("sound.volume", 1.0F, 0.0F, 8.0F);
 	public static final Attr.FloatAttr SOUND_PITCH = new Attr.FloatAttr("sound.pitch", 1.0F, 0.5F, 2.0F);

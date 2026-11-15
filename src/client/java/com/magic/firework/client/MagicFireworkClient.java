@@ -19,6 +19,8 @@ import net.minecraft.client.gui.screens.MenuScreens;
 
 import org.lwjgl.glfw.GLFW;
 
+import net.minecraft.client.gui.screens.MenuScreens;
+
 public class MagicFireworkClient implements ClientModInitializer {
 	public static final KeyMapping EDITOR_KEY = KeyBindingHelper.registerKeyBinding(
 			new KeyMapping("key.magic-firework.open_editor", InputConstants.Type.KEYSYM,
@@ -29,12 +31,6 @@ public class MagicFireworkClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModRegistries.MAGIC_FIREWORK_ENTITY, MagicFireworkEntityRenderer::new);
 
 		MenuScreens.register(ModRegistries.FIREWORK_EDITOR_MENU, FireworkEditorScreen::new);
-
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			while (EDITOR_KEY.consumeClick()) {
-				ClientPlayNetworking.send(FireworkNetworking.OPEN_EDITOR_CHANNEL, PacketByteBufs.empty());
-			}
-		});
 
 		ClientPlayNetworking.registerGlobalReceiver(FireworkNetworking.PROFILE_CHANNEL,
 				(client, handler, buf, responseSender) -> {

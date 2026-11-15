@@ -78,6 +78,7 @@ public final class Interpreter {
 				case UP -> new Vec3(0.0, 1.0, 0.0);
 				case LOOK -> ctx.lookDirection();
 				case VECTOR -> vector;
+				case RELATIVE -> relative(bag, ctx.lookDirection());
 			};
 			if (direction.lengthSqr() < 1.0E-6) {
 				direction = new Vec3(0.0, 1.0, 0.0);
@@ -125,6 +126,32 @@ public final class Interpreter {
 		} else if (op instanceof Op.End) {
 			state.pop();
 		}
+	}
+
+	/**
+	 * The direction relative to whoever launched the rocket: horizontal 0° is straight ahead and
+	 * grows toward their right; the vertical dial is the polar angle from world up (0° = up).
+	 */
+	private static Vec3 relative(AttributeBag bag, Vec3 look) {
+		double yaw = Math.toRadians(Attributes.DIRECTION_YAW.get(bag));
+		double polar = Math.toRadians(Attributes.DIRECTION_PITCH.get(bag));
+
+		double length = Math.hypot(look.x, look.z);
+		double forwardX = 0.0;
+		double forwardZ = 1.0;
+		if (length > 1.0E-4) {
+			// Looking straight up or down leaves no heading; fall back to +Z.
+			forwardX = look.x / length;
+			forwardZ = look.z / length;
+		}
+		double rightX = -forwardZ;
+		double rightZ = forwardX;
+
+		double horizontal = Math.sin(polar);
+		return new Vec3(
+				horizontal * (Math.cos(yaw) * forwardX + Math.sin(yaw) * rightX),
+				Math.cos(polar),
+				horizontal * (Math.cos(yaw) * forwardZ + Math.sin(yaw) * rightZ));
 	}
 
 	/**

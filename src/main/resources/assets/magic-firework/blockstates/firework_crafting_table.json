@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "magic-firework:block/firework_crafting_table"
+    }
+  }
+}
