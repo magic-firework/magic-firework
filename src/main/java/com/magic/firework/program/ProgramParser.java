@@ -25,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
  *     { "op": "await", "ticks": 50 },
  *     { "op": "burst" },
  *     { "op": "spawn", "program": "magic-firework:ring", "count": 4,
- *       "spread": 0.12, "delay": 5 },
+ *       "delay": 5 },
  *     { "op": "await", "ticks": 20 },
  *     { "op": "end" }
  *   ]

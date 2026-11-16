@@ -123,6 +123,9 @@ public final class RocketBrain {
 	/**
 	 * Queue (or hand back immediately) a child. The caller spawns the returned child; a
 	 * delayed one is returned by {@link #dueChildren()} on a later tick.
+	 *
+	 * <p>The child starts with no attribute override, so it flies and renders exactly like its
+	 * own profile says. {@code spread} is parsed legacy data and is ignored.
 	 */
 	public Child scheduleChild(ResourceLocation programId, float spread, int delayTicks) {
 		Child child = new Child(state.age() + Math.max(0, delayTicks), programId, spread, state.nextChildSeed());

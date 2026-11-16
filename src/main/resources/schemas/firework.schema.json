@@ -237,7 +237,8 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "spawn only: 0 follows the parent exactly, 1 aims fully random."
+          "deprecated": true,
+          "description": "spawn only. Ignored: a child now flies along its own launch op and flight.direction.* attributes. Still accepted so existing data packs load."
         },
         "delay": {
           "type": "integer",

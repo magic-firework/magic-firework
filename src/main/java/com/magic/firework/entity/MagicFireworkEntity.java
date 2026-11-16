@@ -19,7 +19,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -186,23 +185,11 @@ public class MagicFireworkEntity extends Entity {
 		if (profile == null) {
 			return;
 		}
-		Vec3 forward = normalized(getDeltaMovement(), brain.lookDirection());
-		RandomSource random = RandomSource.create(child.seed());
-		Vec3 jitter = normalized(new Vec3(
-				random.nextGaussian(),
-				random.nextGaussian() * 0.4,
-				random.nextGaussian()), forward);
-		float spread = Math.max(0.0F, Math.min(1.0F, child.spread()));
-		Vec3 direction = normalized(forward.scale(1.0 - spread).add(jitter.scale(spread)), forward);
-
-		// Aim the child through attributes: its own `launch` op honours these.
-		AttributeBag aim = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "vector")
-				.withFloat(Attributes.DIRECTION_X.key(), (float) direction.x)
-				.withFloat(Attributes.DIRECTION_Y.key(), (float) direction.y)
-				.withFloat(Attributes.DIRECTION_Z.key(), (float) direction.z);
-
-		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), profile, aim, null, this);
+		// Deliberately no direction override: a split child flies the way its own
+		// profile (flight.direction.*) and its own launch op say. Injecting a vector
+		// here would win over both, because launch lets attributes override the op.
+		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), profile,
+				AttributeBag.EMPTY, null, this);
 		if (entity != null) {
 			entity.setDeltaMovement(getDeltaMovement());
 		}
@@ -281,12 +268,5 @@ public class MagicFireworkEntity extends Entity {
 	/** Age in ticks, synced to late trackers so their trail lines up. */
 	public int programAge() {
 		return brain.age();
-	}
-
-	private static Vec3 normalized(Vec3 value, Vec3 fallback) {
-		if (value == null || value.lengthSqr() < EPSILON) {
-			return fallback;
-		}
-		return value.normalize();
 	}
 }

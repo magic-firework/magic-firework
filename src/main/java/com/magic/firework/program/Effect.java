@@ -17,6 +17,7 @@ public sealed interface Effect {
 	record Burst() implements Effect {
 	}
 
+	/** A split child: {@code spread} is legacy data and ignored; the child keeps its own attributes. */
 	record SpawnChild(ResourceLocation program, float spread, int delayTicks) implements Effect {
 	}
 

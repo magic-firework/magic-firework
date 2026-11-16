@@ -303,4 +303,30 @@ class InterpreterTest {
 		assertEquals(2, resumed.depth());
 		assertEquals(1, resumed.stackSize());
 	}
+
+	/**
+	 * A split child starts with no attribute override at all, so its own profile decides the
+	 * direction even when the parent flies sideways. The split path must not inject
+	 * {@code flight.direction.*}: launch lets attributes win over the op, so any injected vector
+	 * silently replaces the child's own direction.
+	 */
+	@Test
+	void spawnedChildKeepsItsOwnDirectionAttributes() {
+		Program child = program(CHILD, new Op.Launch(Op.Direction.VECTOR, new Vec3(0.0, 1.0, 0.0), 0.2F),
+				new Op.End());
+		AttributeBag childDefaults = AttributeBag.EMPTY
+				.withString(Attributes.DIRECTION_MODE.key(), "up");
+		ProgramState state = ProgramState.start(child, childDefaults, 1L, 1);
+		ProgramLookup lookup = lookup(child);
+
+		state.tickAge();
+		// The parent is moving sideways; the child must ignore that and go straight up.
+		List<Effect> effects = Interpreter.tick(state,
+				new InterpreterContext(lookup, Vec3.ZERO, new Vec3(1.0, 0.0, 0.0), false)).effects();
+
+		Effect.SetVelocity velocity = (Effect.SetVelocity) effects.get(0);
+		assertEquals(0.0, velocity.velocity().x, 1.0E-6);
+		assertEquals(0.2, velocity.velocity().y, 1.0E-6);
+		assertEquals(0.0, velocity.velocity().z, 1.0E-6);
+	}
 }

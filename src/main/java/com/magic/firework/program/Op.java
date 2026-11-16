@@ -33,7 +33,14 @@ public sealed interface Op {
 	record Call(ResourceLocation program) implements Op {
 	}
 
-	/** Spawns independent child rockets that run {@code program}. */
+	/**
+	 * Spawns independent child rockets that run {@code program}.
+	 *
+	 * <p>A child starts from its <em>own</em> profile attributes: the parent does not aim it
+	 * and does not pass any attribute override, so its {@code launch} op and its
+	 * {@code flight.direction.*} attributes decide the direction. {@code spread} is kept for
+	 * data pack compatibility and no longer affects anything.
+	 */
 	record Spawn(ResourceLocation program, int count, float spread, int delayTicks) implements Op {
 	}
 
