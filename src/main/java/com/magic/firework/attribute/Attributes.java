@@ -26,13 +26,13 @@ public final class Attributes {
 	public static final Attr.FloatAttr DIRECTION_Y = new Attr.FloatAttr("flight.direction.y", 1.0F, -1.0F, 1.0F);
 	public static final Attr.FloatAttr DIRECTION_Z = new Attr.FloatAttr("flight.direction.z", 0.0F, -1.0F, 1.0F);
 	/**
-	 * The direction editor's two dials in degrees, relative to whoever launches the rocket:
-	 * horizontal 0–360 (0° is straight ahead, growing toward their right) and vertical 0–180
-	 * (the polar angle from up: 0° = up, 90° = horizontal, 180° = down). They pair with
-	 * {@code flight.direction.mode = "relative"}; the world vector is resolved at launch.
+	 * The direction editor's two dials in degrees (0–360), relative to whoever launches the
+	 * rocket: horizontal 0° is straight ahead, growing toward their right, and the vertical dial
+	 * is the polar angle from up (0° = up). They pair with {@code flight.direction.mode =
+	 * "relative"}; the world vector is resolved at launch.
 	 */
 	public static final Attr.FloatAttr DIRECTION_YAW = new Attr.FloatAttr("flight.direction.yaw", 0.0F, 0.0F, 360.0F);
-	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 180.0F);
+	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 360.0F);
 
 	// ── behaviour ────────────────────────────────────────────────────────────
 	/** Explode on the first block/entity collision. */
