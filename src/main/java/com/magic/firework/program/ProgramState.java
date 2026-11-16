@@ -11,18 +11,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 
 /**
- * Everything a running firework knows: the call stack, the tick counter, the local
- * attribute overlay and the seed. Pure data, no world access, so it can be saved,
- * replayed and asserted without a running server.
+ * Everything a running firework knows: the call stack, the tick counter, the attribute bag
+ * and the seed. Pure data, no world access, so it can be saved, replayed and asserted
+ * without a running server.
  *
- * <p>Layering: {@code base} comes from the item/profile, {@code local} is what
- * {@link Op.Set} merges in. {@code bag()} is the flat merge of the two.
+ * <p>The bag is fixed for the entity's whole life: profile defaults overlaid with the item
+ * overlay at launch. No op changes it, so {@code bag()} is simply that snapshot.
  */
 public final class ProgramState {
 	private final List<Frame> stack = new ArrayList<>();
 	private AttributeBag base = AttributeBag.EMPTY;
-	private AttributeBag local = AttributeBag.EMPTY;
-	private AttributeBag resolved = AttributeBag.EMPTY;
 	private long seed;
 	private int age;
 	private int depth;
@@ -33,8 +31,6 @@ public final class ProgramState {
 	public static ProgramState start(Program root, AttributeBag base, long seed, int depth) {
 		ProgramState state = new ProgramState();
 		state.base = base == null ? AttributeBag.EMPTY : base;
-		state.local = AttributeBag.EMPTY;
-		state.resolved = state.base;
 		state.seed = seed;
 		state.depth = depth;
 		state.stack.add(new Frame(root, 0));
@@ -51,7 +47,6 @@ public final class ProgramState {
 	public static ProgramState clientView(AttributeBag base, long seed, int age) {
 		ProgramState state = new ProgramState();
 		state.base = base == null ? AttributeBag.EMPTY : base;
-		state.resolved = state.base;
 		state.seed = seed;
 		state.age = Math.max(0, age);
 		state.initialized = true;
@@ -97,7 +92,7 @@ public final class ProgramState {
 	}
 
 	public AttributeBag bag() {
-		return resolved;
+		return base;
 	}
 
 	public void tickAge() {
@@ -126,14 +121,6 @@ public final class ProgramState {
 		}
 	}
 
-	public void mergeLocal(AttributeBag overlay) {
-		if (overlay == null || overlay.isEmpty()) {
-			return;
-		}
-		local = local.overlay(overlay);
-		resolved = base.overlay(local);
-	}
-
 	public boolean tryConsumeChild() {
 		if (childCount >= Attributes.MAX_CHILDREN.get(bag())) {
 			return false;
@@ -160,7 +147,6 @@ public final class ProgramState {
 		tag.putInt("Age", age);
 		tag.putInt("Depth", depth);
 		tag.putInt("Children", childCount);
-		tag.put("Local", local.save());
 		ListTag frames = new ListTag();
 		for (Frame frame : stack) {
 			frames.add(frame.save());
@@ -172,8 +158,6 @@ public final class ProgramState {
 	public static ProgramState load(CompoundTag tag, ProgramLookup lookup, AttributeBag base) {
 		ProgramState state = new ProgramState();
 		state.base = base == null ? AttributeBag.EMPTY : base;
-		state.local = AttributeBag.load(tag.getCompound("Local"));
-		state.resolved = state.base.overlay(state.local);
 		state.seed = tag.getLong("Seed");
 		state.age = Math.max(0, tag.getInt("Age"));
 		state.depth = Math.max(0, tag.getInt("Depth"));

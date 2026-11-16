@@ -8,8 +8,7 @@ import com.magic.firework.attribute.Attributes;
  *
  * <p>Timing is a tick offset relative to the start of the frame, so a nested {@link Op.Call}
  * shifts a whole program without rewriting a single op. Speed is not part of timing: a rocket
- * that should hover while the clock runs just sets {@code flight.max_speed} to 0 through
- * {@link Op.Set}.
+ * that should hover while the clock runs carries {@code flight.max_speed: 0} from launch.
  *
  * <p>{@link #FUSE_AT} defers the offset to the {@code fuse.ticks} attribute, which is how the
  * crafting table stretches a rocket's flight time without editing the data pack.
@@ -29,8 +28,8 @@ public record Instruction(Op op, int at, When when) {
 	}
 
 	/**
-	 * The tick offset this instruction waits for. Read live from the bag, so a {@link Op.Set}
-	 * that changes {@code fuse.ticks} applies to the instructions after it.
+	 * The tick offset this instruction waits for. Read live from the bag, so an item overlay
+	 * that raises {@code fuse.ticks} stretches the whole show.
 	 */
 	public int resolveAt(AttributeBag bag) {
 		return at == FUSE_AT ? Math.max(0, Attributes.FUSE_TICKS.get(bag)) : at;

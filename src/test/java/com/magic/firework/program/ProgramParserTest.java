@@ -23,7 +23,6 @@ class ProgramParserTest {
 		String json = """
 				[
 				  { "op": "launch", "direction": "vector", "vector": [0.0, 1.0, 0.0], "speed": 0.2 },
-				  { "op": "set", "attributes": { "flight.speed": 0.0 }, "at": 5 },
 				  { "op": "burst", "at": "fuse", "when": { "height": 42.0, "timeout": 100 } },
 				  { "op": "call", "program": "test:child" },
 				  { "op": "spawn", "program": "test:child", "count": 3, "spread": 0.2, "delay": 4 },
@@ -34,21 +33,19 @@ class ProgramParserTest {
 				""";
 		Program program = ProgramParser.parse(ID, nbt(json));
 
-		assertEquals(8, program.size());
+		assertEquals(7, program.size());
 		assertInstanceOf(Op.Launch.class, program.op(0));
 		assertEquals(0, program.instruction(0).at(), "an op without `at` starts the frame");
-		assertInstanceOf(Op.Set.class, program.op(1));
-		assertEquals(5, program.instruction(1).at());
-		assertInstanceOf(Op.Burst.class, program.op(2));
-		assertEquals(Instruction.FUSE_AT, program.instruction(2).at());
-		assertEquals(42.0, program.instruction(2).when().heightAbove());
-		assertEquals(100, program.instruction(2).when().timeout());
-		assertInstanceOf(Op.Call.class, program.op(3));
-		assertEquals(Instruction.FUSE_AT, program.instruction(3).at(), "`at` is inherited");
-		assertInstanceOf(Op.Spawn.class, program.op(4));
-		assertInstanceOf(Op.Sound.class, program.op(5));
-		assertInstanceOf(Op.Light.class, program.op(6));
-		assertInstanceOf(Op.End.class, program.op(7));
+		assertInstanceOf(Op.Burst.class, program.op(1));
+		assertEquals(Instruction.FUSE_AT, program.instruction(1).at());
+		assertEquals(42.0, program.instruction(1).when().heightAbove());
+		assertEquals(100, program.instruction(1).when().timeout());
+		assertInstanceOf(Op.Call.class, program.op(2));
+		assertEquals(Instruction.FUSE_AT, program.instruction(2).at(), "`at` is inherited");
+		assertInstanceOf(Op.Spawn.class, program.op(3));
+		assertInstanceOf(Op.Sound.class, program.op(4));
+		assertInstanceOf(Op.Light.class, program.op(5));
+		assertInstanceOf(Op.End.class, program.op(6));
 	}
 
 	@Test

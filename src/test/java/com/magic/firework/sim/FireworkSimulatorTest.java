@@ -47,22 +47,23 @@ class FireworkSimulatorTest {
 	}
 
 	@Test
-	void maxSpeedZeroHovers() {
+	void maxSpeedZeroKeepsTheRocketInOnePlace() {
 		Program program = new Program(HOVER, List.of(
 				at(0, new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.3F)),
-				at(5, new Op.Set(AttributeBag.EMPTY
-						.withFloat(Attributes.MAX_SPEED.key(), 0.0F)
-						.withFloat(Attributes.GRAVITY.key(), 0.0F))),
-				at(15, new Op.End())));
+				at(20, new Op.End())));
+		// Attributes are fixed at launch now: hovering is a property of the bag, not an op.
+		AttributeBag base = AttributeBag.EMPTY
+				.withFloat(Attributes.MAX_SPEED.key(), 0.0F)
+				.withFloat(Attributes.GRAVITY.key(), 0.0F);
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, ProgramLookup.of(java.util.Map.of()),
-				AttributeBag.EMPTY, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), 100, Double.NEGATIVE_INFINITY);
+				base, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), 100, Double.NEGATIVE_INFINITY);
 
 		assertTrue(result.finished());
 		List<FireworkSimulator.Sample> samples = result.samples();
-		Vec3 afterBrake = samples.get(7).position();
+		Vec3 settled = samples.get(1).position();
 		Vec3 atEnd = samples.get(samples.size() - 1).position();
-		assertEquals(afterBrake.y, atEnd.y, 1.0E-6);
+		assertEquals(settled.y, atEnd.y, 1.0E-6);
 	}
 
 	@Test

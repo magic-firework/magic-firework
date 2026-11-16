@@ -3,7 +3,6 @@ package com.magic.firework.program;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
 
 import net.minecraft.nbt.CompoundTag;
@@ -72,7 +71,6 @@ public final class ProgramParser {
 					Op.Direction.byName(tag.getString("direction")),
 					vector(tag, index),
 					number(tag, "speed", Attributes.SPEED.def(), index));
-			case "set" -> new Op.Set(AttributeBag.load(tag.getCompound("attributes")));
 			case "burst" -> new Op.Burst();
 			case "call" -> new Op.Call(program(tag, index));
 			case "spawn" -> new Op.Spawn(

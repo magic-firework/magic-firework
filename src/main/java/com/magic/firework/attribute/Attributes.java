@@ -16,7 +16,7 @@ public final class Attributes {
 	public static final Attr.FloatAttr SPEED = new Attr.FloatAttr("flight.speed", 0.1F, 0.0F, 4.0F);
 	/** Downward acceleration per tick. 0 keeps the rocket hovering. */
 	public static final Attr.FloatAttr GRAVITY = new Attr.FloatAttr("flight.gravity", 0.0F, -1.0F, 1.0F);
-	/** Velocity cap per tick. Setting this to 0 through a {@code set} op is how a rocket hovers. */
+	/** Velocity cap per tick: 0 keeps the rocket in place while its program's clock runs. */
 	public static final Attr.FloatAttr MAX_SPEED = new Attr.FloatAttr("flight.max_speed", 4.0F, 0.0F, 8.0F);
 	/** Velocity multiplier per tick (1.0 = no drag). */
 	public static final Attr.FloatAttr DRAG = new Attr.FloatAttr("flight.drag", 0.99F, 0.0F, 1.0F);

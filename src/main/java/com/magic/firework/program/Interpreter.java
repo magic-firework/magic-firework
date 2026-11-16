@@ -94,8 +94,6 @@ public final class Interpreter {
 			// Do not write the resolved speed back into the bag: the next launch op may
 			// want its own speed, and flight.speed is an override input, not an output.
 			out.add(new Effect.SetVelocity(direction.normalize().scale(speed)));
-		} else if (op instanceof Op.Set set) {
-			state.mergeLocal(set.attributes());
 		} else if (op instanceof Op.Burst) {
 			out.add(new Effect.Burst());
 		} else if (op instanceof Op.Call call) {

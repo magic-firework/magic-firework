@@ -109,19 +109,6 @@ class InterpreterTest {
 	}
 
 	@Test
-	void setMergesAttributesInOrder() {
-		Program root = program(ROOT,
-				new Op.Set(AttributeBag.EMPTY.withFloat(Attributes.SPEED.key(), 0.5F)),
-				new Op.Set(AttributeBag.EMPTY.withFloat(Attributes.SPEED.key(), 0.9F)),
-				new Op.End());
-		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
-
-		tick(state, lookup(root));
-
-		assertEquals(0.9F, Attributes.SPEED.get(state.bag()), 1.0E-6);
-	}
-
-	@Test
 	void launchUsesAttributeDirectionWhenPresent() {
 		Program root = program(ROOT,
 				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),

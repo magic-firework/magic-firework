@@ -1,7 +1,5 @@
 package com.magic.firework.program;
 
-import com.magic.firework.attribute.AttributeBag;
-
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
@@ -9,16 +7,16 @@ import net.minecraft.world.phys.Vec3;
  * One instruction. A firework is a list of these; see {@link Program}.
  *
  * <p>Ops never touch the world. They either mutate {@link ProgramState} (the program
- * counter, the local attribute overlay) or emit an {@link Effect} that the host applies.
- * That is what keeps the interpreter testable without a running game.
+ * counter, the call stack) or emit an {@link Effect} that the host applies. That is what
+ * keeps the interpreter testable without a running game.
+ *
+ * <p>No op writes an attribute: the bag a rocket runs with is decided before launch (profile
+ * defaults plus the item overlay), and time is {@link Instruction#at()}. A program describes
+ * what happens when, never what it is made of.
  */
 public sealed interface Op {
 	/** Blocks nothing: time, not an await, is what orders a program. */
 	record Launch(Direction direction, Vec3 vector, float speed) implements Op {
-	}
-
-	/** Merges attributes into the local overlay (hover = speed 0, gravity 0). */
-	record Set(AttributeBag attributes) implements Op {
 	}
 
 	/** Fires the burst immediately. Parameters are read from the attributes. */
