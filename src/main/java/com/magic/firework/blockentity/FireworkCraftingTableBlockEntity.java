@@ -115,10 +115,10 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	/**
 	 * Turns one of the direction dials and stores the angles on the firework.
 	 *
-	 * <p>The angles are relative to whoever launches the rocket: horizontal 0–360 (0° is straight
-	 * ahead, growing toward their right) and vertical 0–180 (the polar angle from world up:
-	 * 0° = up, 180° = down). The world vector is resolved at launch, so the same firework flies
-	 * in the same relative direction wherever the player stands.
+	 * <p>The angles are relative to whoever launches the rocket: horizontal 0° is straight ahead,
+	 * growing toward their right; the vertical dial is the polar angle from world up (0° = up).
+	 * Both are clamped to 0–360. The world vector is resolved at launch, so the same firework
+	 * flies in the same relative direction wherever the player stands.
 	 *
 	 * @param which {@link FireworkEditorMenu#ADJUST_YAW} or {@link FireworkEditorMenu#ADJUST_PITCH}
 	 * @param delta degrees to add, normally ±{@link #DIRECTION_STEP_DEGREES}
@@ -137,9 +137,9 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		float yaw = effectiveYaw(definitions);
 		float pitch = effectivePitch(definitions);
 		if (which == FireworkEditorMenu.ADJUST_YAW) {
-			yaw = clampYaw(yaw + step);
+			yaw = clampDegrees(yaw + step);
 		} else {
-			pitch = clampPitch(pitch + step);
+			pitch = clampDegrees(pitch + step);
 		}
 
 		// The launch resolves the vector from the player's heading, so no world vector here —
@@ -170,12 +170,8 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		return (float) Math.toDegrees(Math.acos(y));
 	}
 
-	private static float clampYaw(float value) {
+	private static float clampDegrees(float value) {
 		return Math.max(0.0F, Math.min(360.0F, value));
-	}
-
-	private static float clampPitch(float value) {
-		return Math.max(0.0F, Math.min(180.0F, value));
 	}
 
 	/**

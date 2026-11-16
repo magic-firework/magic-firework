@@ -637,7 +637,7 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     }
 
     private boolean canIncreasePitch() {
-        return this.menu.displayedPitch() < 179.99F;
+        return this.menu.displayedPitch() < 359.99F;
     }
 
     /** Creative players can raise a value without holding the material. */
