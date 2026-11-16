@@ -4,27 +4,30 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One entry of the call stack: a program plus its instruction pointer.
+ * One entry of the call stack: a program, the tick its clock started and its instruction
+ * pointer.
  *
- * <p>{@code waitStart} is the age at which the current {@link Op.Await} began blocking,
- * stored as an absolute tick so that save/load keeps the remaining wait intact.
+ * <p>{@code startAge} is absolute so that save/load keeps a nested frame's schedule intact:
+ * every {@link Instruction#at()} is measured from it, which is what makes a {@code call}
+ * shift a whole program in time without rewriting any op.
  */
 public final class Frame {
 	private final ResourceLocation programId;
 	private final Program program;
+	private final int startAge;
 	private int pc;
-	private int waitStart = -1;
 
-	public Frame(Program program) {
+	public Frame(Program program, int startAge) {
 		this.programId = program.id();
 		this.program = program;
+		this.startAge = Math.max(0, startAge);
 	}
 
-	private Frame(ResourceLocation programId, Program program, int pc, int waitStart) {
+	private Frame(ResourceLocation programId, Program program, int startAge, int pc) {
 		this.programId = programId;
 		this.program = program;
+		this.startAge = Math.max(0, startAge);
 		this.pc = pc;
-		this.waitStart = waitStart;
 	}
 
 	public static Frame load(ProgramLookup lookup, CompoundTag tag) {
@@ -36,7 +39,7 @@ public final class Frame {
 		if (program == null) {
 			return null;
 		}
-		return new Frame(id, program, Math.max(0, tag.getInt("pc")), tag.contains("wait") ? tag.getInt("wait") : -1);
+		return new Frame(id, program, tag.getInt("start"), Math.max(0, tag.getInt("pc")));
 	}
 
 	public ResourceLocation programId() {
@@ -47,6 +50,11 @@ public final class Frame {
 		return program;
 	}
 
+	/** Age of the rocket when this frame was pushed; the frame's timeline starts here. */
+	public int startAge() {
+		return startAge;
+	}
+
 	public int pc() {
 		return pc;
 	}
@@ -55,27 +63,11 @@ public final class Frame {
 		pc++;
 	}
 
-	public int waitStart() {
-		return waitStart;
-	}
-
-	public void markWait(int age) {
-		if (waitStart < 0) {
-			waitStart = age;
-		}
-	}
-
-	public void clearWait() {
-		waitStart = -1;
-	}
-
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("id", programId.toString());
+		tag.putInt("start", startAge);
 		tag.putInt("pc", pc);
-		if (waitStart >= 0) {
-			tag.putInt("wait", waitStart);
-		}
 		return tag;
 	}
 }

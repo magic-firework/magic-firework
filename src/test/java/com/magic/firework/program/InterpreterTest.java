@@ -21,7 +21,19 @@ class InterpreterTest {
 	private static final ResourceLocation CHILD = new ResourceLocation("test", "child");
 
 	private static Program program(ResourceLocation id, Op... ops) {
-		return new Program(id, List.of(ops));
+		return new Program(id, java.util.Arrays.stream(ops).map(Instruction::now).toList());
+	}
+
+	private static Program timed(ResourceLocation id, Instruction... instructions) {
+		return new Program(id, List.of(instructions));
+	}
+
+	private static Instruction at(int tick, Op op) {
+		return new Instruction(op, tick, When.NONE);
+	}
+
+	private static Instruction guarded(int tick, When when, Op op) {
+		return new Instruction(op, tick, when);
 	}
 
 	private static ProgramLookup lookup(Program... programs) {
@@ -39,11 +51,10 @@ class InterpreterTest {
 	}
 
 	@Test
-	void burstHappensAfterTheAwait() {
-		Program root = program(ROOT,
-				new Op.Await(new Cond.Ticks(5)),
-				new Op.Burst(),
-				new Op.End());
+	void burstHappensAtItsScheduledTick() {
+		Program root = timed(ROOT,
+				at(5, new Op.Burst()),
+				at(5, new Op.End()));
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 		ProgramLookup lookup = lookup(root);
 
@@ -55,7 +66,7 @@ class InterpreterTest {
 			}
 		}
 
-		assertEquals(List.of(6), burstAges);
+		assertEquals(List.of(5), burstAges);
 		assertTrue(state.done());
 	}
 
@@ -250,21 +261,20 @@ class InterpreterTest {
 	}
 
 	@Test
-	void fuseTicksOverridesOnlyTheAwaitBeforeBurst() {
-		Program root = program(ROOT,
-				new Op.Await(new Cond.Ticks(40)),
-				new Op.Burst(),
-				new Op.Await(new Cond.Ticks(10)),
-				new Op.End());
+	void fuseAtIsReadFromTheAttribute() {
+		Program root = timed(ROOT,
+				guarded(Instruction.FUSE_AT, When.NONE, new Op.Burst()),
+				at(10, new Op.Burst()),
+				at(10, new Op.End()));
 		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.FUSE_TICKS.key(), 2);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
 
-		int burstAge = -1;
+		List<Integer> burstAges = new ArrayList<>();
 		int doneAge = -1;
 		for (int age = 1; age <= 20; age++) {
 			List<Effect> effects = tick(state, lookup(root));
 			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
-				burstAge = state.age();
+				burstAges.add(state.age());
 			}
 			if (state.done()) {
 				doneAge = state.age();
@@ -272,8 +282,71 @@ class InterpreterTest {
 			}
 		}
 
-		assertEquals(3, burstAge, "fuse.ticks=2 should burst at age 3");
-		assertEquals(13, doneAge, "the post-burst await must stay at 10 ticks");
+		// fuse.ticks=2 fires the first burst; the third instruction keeps its absolute tick,
+		// so a fuse never shifts the ops that follow it.
+		assertEquals(List.of(2, 10), burstAges);
+		assertEquals(10, doneAge);
+	}
+
+	@Test
+	void whenHoldsTheOpUntilTheCollisionHappens() {
+		Program root = timed(ROOT,
+				guarded(2, new When(null, null, true, -1), new Op.Burst()),
+				at(2, new Op.End()));
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
+		ProgramLookup lookup = lookup(root);
+
+		int burstAge = -1;
+		for (int age = 1; age <= 10; age++) {
+			state.tickAge();
+			boolean collided = age >= 6;
+			List<Effect> effects = Interpreter.tick(state,
+					new InterpreterContext(lookup, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), collided)).effects();
+			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
+				burstAge = state.age();
+			}
+		}
+
+		assertEquals(6, burstAge, "the guard waits past `at` until physics agrees");
+		assertTrue(state.done());
+	}
+
+	@Test
+	void whenTimeoutRunsTheOpAnyway() {
+		Program root = timed(ROOT,
+				guarded(2, new When(null, null, true, 3), new Op.Burst()),
+				at(2, new Op.End()));
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
+
+		int burstAge = -1;
+		for (int age = 1; age <= 10 && burstAge < 0; age++) {
+			List<Effect> effects = tick(state, lookup(root));
+			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
+				burstAge = state.age();
+			}
+		}
+
+		assertEquals(5, burstAge, "2 + timeout 3, because the rocket never collides");
+	}
+
+	@Test
+	void callStartsTheNestedTimelineAtItsOwnTick() {
+		Program child = timed(CHILD, at(4, new Op.Burst()), at(4, new Op.End()));
+		Program root = timed(ROOT,
+				at(6, new Op.Call(CHILD)),
+				at(6, new Op.End()));
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
+		ProgramLookup lookup = lookup(root, child);
+
+		List<Integer> burstAges = new ArrayList<>();
+		for (int age = 1; age <= 15; age++) {
+			List<Effect> effects = tick(state, lookup);
+			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
+				burstAges.add(state.age());
+			}
+		}
+
+		assertEquals(List.of(10), burstAges, "6 + 4: the callee's clock starts when it is pushed");
 	}
 
 	@Test
@@ -289,7 +362,7 @@ class InterpreterTest {
 
 	@Test
 	void savesAndResumesMidProgram() {
-		Program root = program(ROOT, new Op.Await(new Cond.Ticks(20)), new Op.Burst(), new Op.End());
+		Program root = timed(ROOT, at(20, new Op.Burst()), at(20, new Op.End()));
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 7L, 2);
 		ProgramLookup lookup = lookup(root);
 		for (int i = 0; i < 5; i++) {

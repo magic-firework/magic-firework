@@ -12,25 +12,17 @@
       16747051
     ],
     "show": "magic-firework:golden_peony",
-    "launch.sound": "minecraft:entity.firework_rocket.launch"
+    "launch.sound": "minecraft:entity.firework_rocket.launch",
+    "fuse.ticks": 34,
+    "afterglow": 60
   },
   "program": [
     {
       "op": "launch"
     },
     {
-      "op": "await",
-      "ticks": 34
-    },
-    {
-      "op": "burst"
-    },
-    {
-      "op": "await",
-      "ticks": 60
-    },
-    {
-      "op": "end"
+      "op": "burst",
+      "at": "fuse"
     }
   ]
 }

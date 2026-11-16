@@ -3,7 +3,7 @@ package com.magic.firework.program;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Read-only view of the host that conditions need. Deliberately tiny: the interpreter
+ * Read-only view of the host that {@link When} guards need. Deliberately tiny: the interpreter
  * must stay runnable in a unit test / the simulator without an entity.
  */
 public record InterpreterContext(ProgramLookup programs, Vec3 position, Vec3 lookDirection, boolean collided) {

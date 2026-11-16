@@ -9,6 +9,7 @@ import com.magic.firework.attribute.Attributes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NumericTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -21,18 +22,18 @@ import net.minecraft.world.phys.Vec3;
  * {
  *   "attributes": { "show": "magic-firework:ring", "fuse.ticks": 35 },
  *   "program": [
- *     { "op": "launch", "direction": "up", "speed": 0.12 },
- *     { "op": "await", "ticks": 50 },
- *     { "op": "burst" },
- *     { "op": "spawn", "program": "magic-firework:ring", "count": 4,
- *       "delay": 5 },
- *     { "op": "await", "ticks": 20 },
+ *     { "op": "launch" },
+ *     { "op": "burst", "at": "fuse" },
  *     { "op": "end" }
  *   ]
  * }
  * </pre>
  *
- * An unknown op is a hard error for that profile: silently skipping it would run a
+ * Every op may carry {@code at} (ticks after the frame starts, or the literal {@code "fuse"}
+ * for {@code fuse.ticks}) and {@code when} (a physics guard). Omitting {@code at} runs the op
+ * on the same tick as the previous one, so a plain sequence is still read top to bottom.
+ *
+ * <p>An unknown op is a hard error for that profile: silently skipping it would run a
  * different show than the author wrote. The store logs and keeps the previous version.
  */
 public final class ProgramParser {
@@ -43,15 +44,22 @@ public final class ProgramParser {
 		if (!(tag instanceof ListTag list)) {
 			throw new ProgramException("program must be a list of ops");
 		}
-		List<Op> ops = new ArrayList<>(list.size());
+		List<Instruction> instructions = new ArrayList<>(list.size());
+		int previousAt = 0;
 		for (int i = 0; i < list.size(); i++) {
 			Tag element = list.get(i);
 			if (!(element instanceof CompoundTag compound)) {
 				throw new ProgramException("op #" + i + " is not an object");
 			}
-			ops.add(parseOp(i, compound));
+			int at = at(compound, i, previousAt);
+			if (at >= 0 && previousAt >= 0 && at < previousAt) {
+				throw new ProgramException("op #" + i + " has \"at\": " + at
+						+ ", which is before the previous op's " + previousAt);
+			}
+			instructions.add(new Instruction(parseOp(i, compound), at, when(compound, i)));
+			previousAt = at;
 		}
-		return new Program(id, ops);
+		return new Program(id, instructions);
 	}
 
 	private static Op parseOp(int index, CompoundTag tag) throws ProgramException {
@@ -64,7 +72,6 @@ public final class ProgramParser {
 					Op.Direction.byName(tag.getString("direction")),
 					vector(tag, index),
 					number(tag, "speed", Attributes.SPEED.def(), index));
-			case "await" -> new Op.Await(condition(tag, index));
 			case "set" -> new Op.Set(AttributeBag.load(tag.getCompound("attributes")));
 			case "burst" -> new Op.Burst();
 			case "call" -> new Op.Call(program(tag, index));
@@ -85,25 +92,49 @@ public final class ProgramParser {
 		};
 	}
 
-	private static Cond condition(CompoundTag tag, int index) throws ProgramException {
-		Cond primary = null;
-		if (tag.contains("ticks")) {
-			primary = new Cond.Ticks(tag.getInt("ticks"));
-		} else if (tag.contains("height")) {
-			primary = new Cond.HeightAbove(tag.getDouble("height"));
-		} else if (tag.contains("below")) {
-			primary = new Cond.HeightBelow(tag.getDouble("below"));
-		} else if (tag.getBoolean("collision")) {
-			primary = new Cond.Collision();
+	/**
+	 * @param previousAt the offset of the previous instruction, inherited when {@code at} is
+	 *                   omitted so a list reads as a sequence of same-tick ops unless stated
+	 */
+	private static int at(CompoundTag tag, int index, int previousAt) throws ProgramException {
+		Tag raw = tag.get("at");
+		if (raw == null) {
+			return previousAt;
 		}
-		if (primary == null) {
-			// Code-side default: an await with no condition waits for the fuse.
-			primary = new Cond.Ticks(Attributes.FUSE_TICKS.def());
+		if (raw instanceof StringTag literal) {
+			if ("fuse".equalsIgnoreCase(literal.getAsString())) {
+				return Instruction.FUSE_AT;
+			}
+			throw new ProgramException("op #" + index + " has an invalid \"at\": \""
+					+ literal.getAsString() + "\" (expected a tick or \"fuse\")");
 		}
-		if (tag.contains("timeout")) {
-			return new Cond.Or(primary, new Cond.Ticks(tag.getInt("timeout")));
+		if (!(raw instanceof NumericTag)) {
+			throw new ProgramException("op #" + index + " \"at\" must be a tick or \"fuse\"");
 		}
-		return primary;
+		int value = tag.getInt("at");
+		if (value < 0) {
+			throw new ProgramException("op #" + index + " has a negative \"at\": " + value);
+		}
+		return value;
+	}
+
+	private static When when(CompoundTag tag, int index) throws ProgramException {
+		Tag raw = tag.get("when");
+		if (raw == null) {
+			return When.NONE;
+		}
+		if (!(raw instanceof CompoundTag guard)) {
+			throw new ProgramException("op #" + index + " \"when\" must be an object");
+		}
+		Double heightAbove = guard.contains("height") ? guard.getDouble("height") : null;
+		Double heightBelow = guard.contains("below") ? guard.getDouble("below") : null;
+		boolean collision = guard.getBoolean("collision");
+		int timeout = guard.contains("timeout") ? Math.max(0, guard.getInt("timeout")) : -1;
+		When when = new When(heightAbove, heightBelow, collision, timeout);
+		if (when.isEmpty()) {
+			throw new ProgramException("op #" + index + " \"when\" needs \"height\", \"below\" or \"collision\"");
+		}
+		return when;
 	}
 
 	private static ResourceLocation program(CompoundTag tag, int index) throws ProgramException {

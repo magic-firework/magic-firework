@@ -13,12 +13,8 @@ import net.minecraft.world.phys.Vec3;
  * That is what keeps the interpreter testable without a running game.
  */
 public sealed interface Op {
-	/** Sets the velocity. Direction {@code up}/{@code look}/{@code vector}/{@code relative}. */
+	/** Blocks nothing: time, not an await, is what orders a program. */
 	record Launch(Direction direction, Vec3 vector, float speed) implements Op {
-	}
-
-	/** Blocks until the condition holds. */
-	record Await(Cond cond) implements Op {
 	}
 
 	/** Merges attributes into the local overlay (hover = speed 0, gravity 0). */

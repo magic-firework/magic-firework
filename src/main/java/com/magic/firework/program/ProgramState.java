@@ -37,7 +37,7 @@ public final class ProgramState {
 		state.resolved = state.base;
 		state.seed = seed;
 		state.depth = depth;
-		state.stack.add(new Frame(root));
+		state.stack.add(new Frame(root, 0));
 		state.initialized = true;
 		return state;
 	}
@@ -117,7 +117,7 @@ public final class ProgramState {
 				return;
 			}
 		}
-		stack.add(new Frame(program));
+		stack.add(new Frame(program, age));
 	}
 
 	public void pop() {

@@ -7,9 +7,10 @@ import java.util.List;
 
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
-import com.magic.firework.program.Cond;
+import com.magic.firework.program.Instruction;
 import com.magic.firework.program.Op;
 import com.magic.firework.program.Program;
+import com.magic.firework.program.When;
 import com.magic.firework.program.ProgramLookup;
 
 import org.junit.jupiter.api.Test;
@@ -22,13 +23,20 @@ class FireworkSimulatorTest {
 	private static final ResourceLocation HOVER = new ResourceLocation("test", "hover");
 	private static final ResourceLocation SPLIT = new ResourceLocation("test", "split");
 
+	private static Instruction at(int tick, Op op) {
+		return new Instruction(op, tick, When.NONE);
+	}
+
+	private static Instruction guarded(int tick, When when, Op op) {
+		return new Instruction(op, tick, when);
+	}
+
 	@Test
 	void fliesUpAndBursts() {
 		Program program = new Program(UP, List.of(
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
-				new Op.Await(new Cond.Ticks(10)),
-				new Op.Burst(),
-				new Op.End()));
+				at(0, new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F)),
+				at(10, new Op.Burst()),
+				at(10, new Op.End())));
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, ProgramLookup.of(java.util.Map.of()),
 				AttributeBag.EMPTY, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), 100, Double.NEGATIVE_INFINITY);
@@ -41,13 +49,11 @@ class FireworkSimulatorTest {
 	@Test
 	void maxSpeedZeroHovers() {
 		Program program = new Program(HOVER, List.of(
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.3F),
-				new Op.Await(new Cond.Ticks(5)),
-				new Op.Set(AttributeBag.EMPTY
+				at(0, new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.3F)),
+				at(5, new Op.Set(AttributeBag.EMPTY
 						.withFloat(Attributes.MAX_SPEED.key(), 0.0F)
-						.withFloat(Attributes.GRAVITY.key(), 0.0F)),
-				new Op.Await(new Cond.Ticks(10)),
-				new Op.End()));
+						.withFloat(Attributes.GRAVITY.key(), 0.0F))),
+				at(15, new Op.End())));
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, ProgramLookup.of(java.util.Map.of()),
 				AttributeBag.EMPTY, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), 100, Double.NEGATIVE_INFINITY);
@@ -60,11 +66,10 @@ class FireworkSimulatorTest {
 	}
 
 	@Test
-	void groundCollisionSatisfiesAwait() {
+	void groundCollisionSatisfiesTheGuard() {
 		Program program = new Program(UP, List.of(
-				new Op.Await(new Cond.Collision()),
-				new Op.Burst(),
-				new Op.End()));
+				guarded(0, new When(null, null, true, -1), new Op.Burst()),
+				at(0, new Op.End())));
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, ProgramLookup.of(java.util.Map.of()),
 				// gravity makes it fall onto the ground plane at y = 0.5
@@ -77,10 +82,10 @@ class FireworkSimulatorTest {
 
 	@Test
 	void spawnEmitsChildrenWithinLimit() {
-		Program child = new Program(new ResourceLocation("test", "child"), List.of(new Op.End()));
+		Program child = new Program(new ResourceLocation("test", "child"), List.of(at(0, new Op.End())));
 		Program program = new Program(SPLIT, List.of(
-				new Op.Spawn(child.id(), 6, 0.2F, 0),
-				new Op.End()));
+				at(0, new Op.Spawn(child.id(), 6, 0.2F, 0)),
+				at(0, new Op.End())));
 		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.MAX_CHILDREN.key(), 4);
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program,

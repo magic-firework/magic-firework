@@ -12,8 +12,9 @@ import java.util.Map;
 
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
-import com.magic.firework.program.Cond;
+import com.magic.firework.program.Instruction;
 import com.magic.firework.program.Op;
+import com.magic.firework.program.When;
 import com.magic.firework.program.Program;
 import com.magic.firework.program.ProgramLookup;
 
@@ -29,7 +30,15 @@ class RocketBrainTest {
 	private static final Vec3 UP = new Vec3(0.0, 1.0, 0.0);
 
 	private static Program program(ResourceLocation id, Op... ops) {
-		return new Program(id, List.of(ops));
+		return new Program(id, java.util.Arrays.stream(ops).map(Instruction::now).toList());
+	}
+
+	private static Program timed(ResourceLocation id, Instruction... instructions) {
+		return new Program(id, List.of(instructions));
+	}
+
+	private static Instruction at(int tick, Op op) {
+		return new Instruction(op, tick, When.NONE);
 	}
 
 	private static ProgramLookup lookup(Program... programs) {
@@ -42,7 +51,7 @@ class RocketBrainTest {
 
 	@Test
 	void delayedChildAppearsAfterItsTick() {
-		Program root = program(ROOT, new Op.Await(new Cond.Ticks(100)), new Op.End());
+		Program root = timed(ROOT, at(100, new Op.End()));
 		RocketBrain brain = RocketBrain.launch(ROOT, root, AttributeBag.EMPTY, 1L, 0, UP);
 
 		assertNull(brain.scheduleChild(CHILD, 0.1F, 3));
@@ -57,7 +66,7 @@ class RocketBrainTest {
 
 	@Test
 	void immediateChildIsHandedBackRightAway() {
-		Program root = program(ROOT, new Op.Await(new Cond.Ticks(100)), new Op.End());
+		Program root = timed(ROOT, at(100, new Op.End()));
 		RocketBrain brain = RocketBrain.launch(ROOT, root, AttributeBag.EMPTY, 1L, 0, UP);
 
 		RocketBrain.Child child = brain.scheduleChild(CHILD, 0.1F, 0);
@@ -88,7 +97,7 @@ class RocketBrainTest {
 
 	@Test
 	void saveAndLoadKeepsAgeSeedAndStack() {
-		Program root = program(ROOT, new Op.Await(new Cond.Ticks(20)), new Op.Burst(), new Op.End());
+		Program root = timed(ROOT, at(20, new Op.Burst()), at(20, new Op.End()));
 		RocketBrain brain = RocketBrain.launch(ROOT, root, AttributeBag.EMPTY, 7L, 2, UP);
 		brain.advanceAge();
 		brain.tick(lookup(root), Vec3.ZERO);

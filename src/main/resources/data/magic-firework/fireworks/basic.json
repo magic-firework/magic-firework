@@ -6,9 +6,12 @@
     "launch.sound": "minecraft:entity.firework_rocket.launch"
   },
   "program": [
-    { "op": "launch" },
-    { "op": "await" },
-    { "op": "burst" },
-    { "op": "end" }
+    {
+      "op": "launch"
+    },
+    {
+      "op": "burst",
+      "at": "fuse"
+    }
   ]
 }

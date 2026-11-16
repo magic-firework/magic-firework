@@ -15,12 +15,16 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Rules, in order:
  * <ol>
- *   <li>execute ops until the top frame blocks on an unsatisfied {@link Op.Await};</li>
+ *   <li>execute ops until the top frame is not due yet ({@link Instruction#at()} on the
+ *       frame's own clock) or an {@link Instruction#when()} guard still fails;</li>
  *   <li>a frame whose program counter leaves the end is popped (implicit {@code end});</li>
  *   <li>at most {@link FireworkLimits#maxOpsPerTick} ops run per tick, so a pathological
  *       program cannot stall the server;</li>
  *   <li>ops only mutate {@link ProgramState} or append an {@link Effect}.</li>
  * </ol>
+ *
+ * <p>There is no wait op: time is a property of every instruction, and the program never
+ * blocks on anything except its own schedule.
  */
 public final class Interpreter {
 	private Interpreter() {
@@ -41,20 +45,19 @@ public final class Interpreter {
 				state.pop();
 				continue;
 			}
-			Op op = frame.program().op(frame.pc());
-			if (op instanceof Op.Await await) {
-				int elapsed = frame.waitStart() < 0 ? 0 : state.age() - frame.waitStart();
-				Cond cond = resolveAwait(await.cond(), frame.program(), frame.pc(), state.bag());
-				if (!cond.satisfied(ctx.position(), ctx.collided(), elapsed)) {
-					frame.markWait(state.age());
-					break;
-				}
-				frame.clearWait();
-				frame.advance();
-				continue;
+			Instruction instruction = frame.program().instruction(frame.pc());
+			int dueAt = frame.startAge() + instruction.resolveAt(state.bag());
+			if (state.age() < dueAt) {
+				// The frame's next entry is in the future: the whole rocket idles until then,
+				// still flying. That is what "await = v=0 plus time" turned into.
+				break;
+			}
+			if (instruction.guarded() && !instruction.when().satisfied(ctx.position(), ctx.collided())
+					&& !instruction.when().expired(state.age() - dueAt)) {
+				break;
 			}
 			frame.advance();
-			apply(op, state, ctx, effects);
+			apply(instruction.op(), state, ctx, effects);
 		}
 		return new Effect.TickResult(List.copyOf(effects), state.done());
 	}
@@ -91,8 +94,6 @@ public final class Interpreter {
 			// Do not write the resolved speed back into the bag: the next launch op may
 			// want its own speed, and flight.speed is an override input, not an output.
 			out.add(new Effect.SetVelocity(direction.normalize().scale(speed)));
-		} else if (op instanceof Op.Await) {
-			// handled in tick()
 		} else if (op instanceof Op.Set set) {
 			state.mergeLocal(set.attributes());
 		} else if (op instanceof Op.Burst) {
@@ -152,23 +153,5 @@ public final class Interpreter {
 				horizontal * (Math.cos(yaw) * forwardX + Math.sin(yaw) * rightX),
 				Math.cos(polar),
 				horizontal * (Math.cos(yaw) * forwardZ + Math.sin(yaw) * rightZ));
-	}
-
-	/**
-	 * Only the await immediately before a burst reads {@code fuse.ticks}; the timeout
-	 * fallback and every other await stay structural.
-	 */
-	private static Cond resolveAwait(Cond cond, Program program, int pc, AttributeBag bag) {
-		if (cond instanceof Cond.Or or) {
-			return new Cond.Or(resolveAwait(or.primary(), program, pc, bag), or.fallback());
-		}
-		if (cond instanceof Cond.Ticks && bag.has(Attributes.FUSE_TICKS.key()) && isBeforeBurst(program, pc)) {
-			return new Cond.Ticks(Attributes.FUSE_TICKS.get(bag));
-		}
-		return cond;
-	}
-
-	private static boolean isBeforeBurst(Program program, int pc) {
-		return pc + 1 < program.size() && program.op(pc + 1) instanceof Op.Burst;
 	}
 }

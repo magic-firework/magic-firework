@@ -2,13 +2,18 @@
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
     "show": "magic-firework:flower",
-    "launch.sound": "minecraft:entity.firework_rocket.launch"
+    "launch.sound": "minecraft:entity.firework_rocket.launch",
+    "fuse.ticks": 26,
+    "afterglow": 10
   },
   "program": [
-    { "op": "launch", "speed": 0.22 },
-    { "op": "await", "ticks": 26 },
-    { "op": "burst" },
-    { "op": "await", "ticks": 10 },
-    { "op": "end" }
+    {
+      "op": "launch",
+      "speed": 0.22
+    },
+    {
+      "op": "burst",
+      "at": "fuse"
+    }
   ]
 }

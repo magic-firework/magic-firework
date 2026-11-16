@@ -9,14 +9,19 @@
     "launch.sound": "minecraft:entity.firework_rocket.launch",
     "trail.enabled": true,
     "trail.interval": 1,
-    "trail.colors": [16777215],
+    "trail.colors": [
+      16777215
+    ],
     "trail.scale": 0.55,
     "show": "magic-firework:vanilla_ball"
   },
   "program": [
-    { "op": "launch" },
-    { "op": "await" },
-    { "op": "burst" },
-    { "op": "end" }
+    {
+      "op": "launch"
+    },
+    {
+      "op": "burst",
+      "at": "fuse"
+    }
   ]
 }

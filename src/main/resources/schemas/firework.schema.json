@@ -135,7 +135,7 @@
           "minimum": 0,
           "maximum": 400,
           "default": 40,
-          "description": "Replaces the await immediately before a burst when the attribute is present."
+          "description": "Tick offset used by every instruction with `at: \"fuse\"`; the crafting table raises it to stretch flight time."
         },
         "sound.id": {
           "$ref": "./common.schema.json#/$defs/id",
@@ -177,10 +177,47 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["op"],
-      "description": "One instruction. Time is await, nesting is call/end, children are spawn.",
+      "description": "One timed instruction. `at` places it on the frame's tick timeline, `when` gates it on physics, nesting is call/end, children are spawn.",
       "properties": {
         "op": {
-          "enum": ["launch", "await", "set", "burst", "call", "spawn", "sound", "light", "end"]
+          "enum": ["launch", "set", "burst", "call", "spawn", "sound", "light", "end"]
+        },
+        "at": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "const": "fuse"
+            }
+          ],
+          "description": "Ticks after the frame starts. \"fuse\" reads the fuse.ticks attribute. Omitted means the same tick as the previous instruction."
+        },
+        "when": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "description": "Optional physics guard: the op runs at `at` only once this holds. Nesting a call does not reset it.",
+          "properties": {
+            "height": {
+              "type": "number",
+              "description": "Wait until position.y is above this."
+            },
+            "below": {
+              "type": "number",
+              "description": "Wait until position.y is below this."
+            },
+            "collision": {
+              "type": "boolean",
+              "description": "Wait until the rocket has collided."
+            },
+            "timeout": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Give up waiting this many ticks after `at` and run the op anyway."
+            }
+          }
         },
         "direction": {
           "enum": ["up", "look", "vector", "relative"],
@@ -200,24 +237,7 @@
         "ticks": {
           "type": "integer",
           "minimum": 0,
-          "description": "await: elapsed ticks. light: light duration (0..400)."
-        },
-        "height": {
-          "type": "number",
-          "description": "await only: proceed once position.y is above this."
-        },
-        "below": {
-          "type": "number",
-          "description": "await only: proceed once position.y is below this."
-        },
-        "collision": {
-          "type": "boolean",
-          "description": "await only: proceed once the rocket has collided."
-        },
-        "timeout": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "await only: failsafe ticks, ORed with the primary condition."
+          "description": "light only: light duration (0..400)."
         },
         "attributes": {
           "$ref": "#/$defs/attributes",

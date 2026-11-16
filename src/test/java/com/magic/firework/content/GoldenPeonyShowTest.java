@@ -97,7 +97,7 @@ class GoldenPeonyShowTest {
 		Program program = ProgramParser.parse(DefinitionIds.GOLDEN_PEONY, root.get("program"));
 		AttributeBag defaults = AttributeBag.load(root.getCompound("attributes"));
 
-		assertEquals(5, program.size(), "launch, await, burst, await, end");
+		assertEquals(2, program.size(), "launch, then burst at the fuse");
 		assertEquals(SHOW.toString(), defaults.raw().getString(Attributes.SHOW));
 		assertEquals(0.26F, defaults.raw().getFloat("flight.speed"), 1.0E-6F);
 	}

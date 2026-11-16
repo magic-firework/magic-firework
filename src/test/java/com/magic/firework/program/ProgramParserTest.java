@@ -3,12 +3,10 @@ package com.magic.firework.program;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
 import com.google.gson.JsonParser;
-import com.magic.firework.attribute.Attributes;
 import com.magic.firework.content.JsonToNbt;
 
 import org.junit.jupiter.api.Test;
@@ -21,15 +19,12 @@ class ProgramParserTest {
 	private static final ResourceLocation ID = new ResourceLocation("test", "program");
 
 	@Test
-	void parsesEveryOp() throws Exception {
+	void parsesEveryOpAndItsTiming() throws Exception {
 		String json = """
 				[
 				  { "op": "launch", "direction": "vector", "vector": [0.0, 1.0, 0.0], "speed": 0.2 },
-				  { "op": "await", "ticks": 5 },
-				  { "op": "await", "height": 42.0, "timeout": 100 },
-				  { "op": "await", "collision": true },
-				  { "op": "set", "attributes": { "flight.speed": 0.0 } },
-				  { "op": "burst" },
+				  { "op": "set", "attributes": { "flight.speed": 0.0 }, "at": 5 },
+				  { "op": "burst", "at": "fuse", "when": { "height": 42.0, "timeout": 100 } },
 				  { "op": "call", "program": "test:child" },
 				  { "op": "spawn", "program": "test:child", "count": 3, "spread": 0.2, "delay": 4 },
 				  { "op": "sound", "id": "minecraft:entity.firework_rocket.launch", "volume": 2.0 },
@@ -39,19 +34,42 @@ class ProgramParserTest {
 				""";
 		Program program = ProgramParser.parse(ID, nbt(json));
 
-		assertEquals(11, program.size());
+		assertEquals(8, program.size());
 		assertInstanceOf(Op.Launch.class, program.op(0));
-		assertInstanceOf(Op.Await.class, program.op(1));
-		assertInstanceOf(Op.Await.class, program.op(2));
-		assertTrue(((Op.Await) program.op(2)).cond() instanceof Cond.Or);
-		assertInstanceOf(Op.Await.class, program.op(3));
-		assertInstanceOf(Op.Set.class, program.op(4));
-		assertInstanceOf(Op.Burst.class, program.op(5));
-		assertInstanceOf(Op.Call.class, program.op(6));
-		assertInstanceOf(Op.Spawn.class, program.op(7));
-		assertInstanceOf(Op.Sound.class, program.op(8));
-		assertInstanceOf(Op.Light.class, program.op(9));
-		assertInstanceOf(Op.End.class, program.op(10));
+		assertEquals(0, program.instruction(0).at(), "an op without `at` starts the frame");
+		assertInstanceOf(Op.Set.class, program.op(1));
+		assertEquals(5, program.instruction(1).at());
+		assertInstanceOf(Op.Burst.class, program.op(2));
+		assertEquals(Instruction.FUSE_AT, program.instruction(2).at());
+		assertEquals(42.0, program.instruction(2).when().heightAbove());
+		assertEquals(100, program.instruction(2).when().timeout());
+		assertInstanceOf(Op.Call.class, program.op(3));
+		assertEquals(Instruction.FUSE_AT, program.instruction(3).at(), "`at` is inherited");
+		assertInstanceOf(Op.Spawn.class, program.op(4));
+		assertInstanceOf(Op.Sound.class, program.op(5));
+		assertInstanceOf(Op.Light.class, program.op(6));
+		assertInstanceOf(Op.End.class, program.op(7));
+	}
+
+	@Test
+	void backwardsAtIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "end", "at": 10 }, { "op": "burst", "at": 5 }]
+				""")));
+	}
+
+	@Test
+	void invalidAtIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "end", "at": "later" }]
+				""")));
+	}
+
+	@Test
+	void whenWithoutAConditionIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "burst", "when": { "timeout": 5 } }]
+				""")));
 	}
 
 	@Test
@@ -74,13 +92,11 @@ class ProgramParserTest {
 	}
 
 	@Test
-	void awaitWithoutConditionUsesCodeDefault() throws Exception {
-		Program program = ProgramParser.parse(ID, nbt("""
-				[{ "op": "await" }]
-				"""));
-		Op.Await await = (Op.Await) program.op(0);
-
-		assertEquals(Attributes.FUSE_TICKS.def(), ((Cond.Ticks) await.cond()).ticks());
+	void awaitIsNoLongerAnOp() {
+		// Time is a property of every instruction now; the old blocking op is a hard error.
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "await", "ticks": 5 }]
+				""")));
 	}
 
 	@Test
@@ -99,7 +115,7 @@ class ProgramParserTest {
 	void emptyProgramIsAllowed() throws Exception {
 		Program program = ProgramParser.parse(ID, nbt("[]"));
 		assertEquals(0, program.size());
-		assertEquals(List.of(), program.ops());
+		assertEquals(List.of(), program.instructions());
 	}
 
 	@Test
