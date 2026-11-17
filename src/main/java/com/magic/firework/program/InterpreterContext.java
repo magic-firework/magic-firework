@@ -3,11 +3,12 @@ package com.magic.firework.program;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Read-only view of the host that conditions need. Deliberately tiny: the interpreter
- * must stay runnable in a unit test / the simulator without an entity.
+ * Read-only view of the host an op needs: program lookup for {@link Op.Call} and the launcher's
+ * heading for {@link Op.Launch} in {@code look} / {@code relative} mode.
+ *
+ * <p>Deliberately tiny: no {@code Level}, no entity, no position. Time is spent by
+ * {@link Op.Wait}, never by reading the world, so a program runs identically on the server, in
+ * the headless simulator and in a unit test.
  */
-public record InterpreterContext(ProgramLookup programs, Vec3 position, Vec3 lookDirection, boolean collided) {
-	public static InterpreterContext of(ProgramLookup programs, Vec3 position) {
-		return new InterpreterContext(programs, position, new Vec3(0.0, 1.0, 0.0), false);
-	}
+public record InterpreterContext(ProgramLookup programs, Vec3 lookDirection) {
 }

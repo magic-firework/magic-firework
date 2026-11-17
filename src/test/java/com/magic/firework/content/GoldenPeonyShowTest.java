@@ -2,6 +2,7 @@ package com.magic.firework.content;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -19,6 +20,7 @@ import com.magic.firework.core.eval.Evaluate;
 import com.magic.firework.core.eval.Plan;
 import com.magic.firework.core.shape.Ink;
 import com.magic.firework.core.show.Show;
+import com.magic.firework.program.Op;
 import com.magic.firework.program.Program;
 import com.magic.firework.program.ProgramParser;
 
@@ -97,7 +99,10 @@ class GoldenPeonyShowTest {
 		Program program = ProgramParser.parse(DefinitionIds.GOLDEN_PEONY, root.get("program"));
 		AttributeBag defaults = AttributeBag.load(root.getCompound("attributes"));
 
-		assertEquals(5, program.size(), "launch, await, burst, await, end");
+		assertEquals(3, program.size(), "launch, the flight time, then burst");
+		assertInstanceOf(Op.Wait.Flight.class, program.op(1),
+				"flight time is the attribute, not a number baked into the profile");
+		assertEquals(34, Attributes.FLIGHT_TICKS.get(defaults), "the profile still ships a starting value");
 		assertEquals(SHOW.toString(), defaults.raw().getString(Attributes.SHOW));
 		assertEquals(0.26F, defaults.raw().getFloat("flight.speed"), 1.0E-6F);
 	}

@@ -30,7 +30,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 public class FireworkEditorMenu extends AbstractContainerMenu {
     /** Which value the flight page's steppers adjust. */
     public static final int ADJUST_SPEED = 0;
-    public static final int ADJUST_FUSE = 1;
+    public static final int ADJUST_FLIGHT_TIME = 1;
     /** Which dial the direction page's steppers turn. */
     public static final int ADJUST_YAW = 0;
     public static final int ADJUST_PITCH = 1;
@@ -47,12 +47,13 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 
     // Synced display values: speed (milli-units), flight time (ticks), yaw / pitch (milli-degrees).
     private static final int DATA_SPEED = 0;
-    private static final int DATA_FUSE = 1;
+    private static final int DATA_FLIGHT = 1;
     private static final int DATA_YAW = 2;
     private static final int DATA_PITCH = 3;
+    private static final int DATA_COUNT = 4;
 
     private final Container center;
-    private final SimpleContainerData editorData = new SimpleContainerData(4);
+    private final SimpleContainerData editorData = new SimpleContainerData(DATA_COUNT);
 
     public FireworkEditorMenu(int containerId, Inventory playerInventory) {
         this(containerId, playerInventory, new SimpleContainer(3));
@@ -99,7 +100,7 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
             if (runtime != null) {
                 Definitions definitions = runtime.definitions();
                 this.editorData.set(DATA_SPEED, Math.round(table.effectiveSpeed(definitions) * 1000.0F));
-                this.editorData.set(DATA_FUSE, table.effectiveFuse(definitions));
+                this.editorData.set(DATA_FLIGHT, table.effectiveFlight(definitions));
                 this.editorData.set(DATA_YAW, Math.round(table.effectiveYaw(definitions) * 1000.0F));
                 this.editorData.set(DATA_PITCH, Math.round(table.effectivePitch(definitions) * 1000.0F));
             }
@@ -111,8 +112,8 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
         return this.editorData.get(DATA_SPEED) / 1000.0F;
     }
 
-    public int displayedFuse() {
-        return this.editorData.get(DATA_FUSE);
+    public int displayedFlight() {
+        return this.editorData.get(DATA_FLIGHT);
     }
 
     public float displayedYaw() {

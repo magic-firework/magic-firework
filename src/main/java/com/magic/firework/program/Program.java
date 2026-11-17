@@ -5,11 +5,11 @@ import java.util.List;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * An immutable, straight-line instruction list.
+ * An immutable, straight-line op sequence.
  *
- * <p>There is no jump instruction and no phase enum: time is {@link Op.Await}, nesting
- * is {@link Op.Call} (push a frame) and {@link Op.End} (pop). Branches are unnecessary
- * because every firework is a one-shot sequence, which is exactly why this stays small.
+ * <p>There is no jump instruction and no phase enum: time is spent by {@link Op.Wait}, nesting is
+ * {@link Op.Call} (push a frame) and {@link Op.End} (pop). Branches are unnecessary because every
+ * firework is a one-shot sequence, which is exactly why this stays small.
  */
 public record Program(ResourceLocation id, List<Op> ops) {
 	public Program {

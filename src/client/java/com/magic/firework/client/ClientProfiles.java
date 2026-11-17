@@ -64,7 +64,7 @@ public final class ClientProfiles {
 	}
 
 	private static void apply(MagicFireworkEntity entity, FireworkNetworking.Profile profile) {
-		entity.acceptProfile(profile.seed(), profile.age(), profile.bag());
+		entity.acceptProfile(profile.seed(), profile.age(), profile.velocity(), profile.bag());
 	}
 
 	private static MagicFireworkEntity find(Minecraft client, int entityId) {

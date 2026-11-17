@@ -38,6 +38,11 @@ public class FireworkBlueprintItem extends Item {
 		}
 		ResourceLocation profile = FireworkDataHelper.profileId(BlueprintDataHelper.source(stack));
 		tooltip.add(Component.literal(profile.toString()).withStyle(ChatFormatting.GRAY));
+		int nested = FireworkDataHelper.spec(BlueprintDataHelper.source(stack)).children().size();
+		if (nested > 0) {
+			tooltip.add(Component.translatable("tooltip.magic-firework.blueprint.nested", nested)
+					.withStyle(ChatFormatting.DARK_AQUA));
+		}
 		tooltip.add(Component.translatable("tooltip.magic-firework.blueprint.cost", materials(stack))
 				.withStyle(ChatFormatting.DARK_GRAY));
 		tooltip.add(Component.translatable("tooltip.magic-firework.blueprint.locked")

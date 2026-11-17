@@ -4,27 +4,30 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One entry of the call stack: a program plus its instruction pointer.
+ * One entry of the call stack: a program, its instruction pointer and its pending wait.
  *
- * <p>{@code waitStart} is the age at which the current {@link Op.Await} began blocking,
- * stored as an absolute tick so that save/load keeps the remaining wait intact.
+ * <p>{@code waitUntil} is an absolute age, not a countdown, so saving mid-wait and loading it
+ * back resumes on exactly the tick the author scheduled: a {@code wait 25} pushed at age 7 is
+ * satisfied at age 32 before and after a reload, and no tick is lost or repeated.
  */
 public final class Frame {
+	/** No wait in progress. An absolute age is never negative, so the sentinel is unambiguous. */
+	public static final int NO_WAIT = -1;
+
 	private final ResourceLocation programId;
 	private final Program program;
 	private int pc;
-	private int waitStart = -1;
+	private int waitUntil = NO_WAIT;
 
 	public Frame(Program program) {
-		this.programId = program.id();
-		this.program = program;
+		this(program.id(), program, 0, NO_WAIT);
 	}
 
-	private Frame(ResourceLocation programId, Program program, int pc, int waitStart) {
+	private Frame(ResourceLocation programId, Program program, int pc, int waitUntil) {
 		this.programId = programId;
 		this.program = program;
-		this.pc = pc;
-		this.waitStart = waitStart;
+		this.pc = Math.max(0, pc);
+		this.waitUntil = Math.max(NO_WAIT, waitUntil);
 	}
 
 	public static Frame load(ProgramLookup lookup, CompoundTag tag) {
@@ -36,8 +39,7 @@ public final class Frame {
 		if (program == null) {
 			return null;
 		}
-		return new Frame(id, program, Math.max(0, tag.getInt("pc")), tag.contains("wait") ? tag.getInt("wait") : -1);
-	}
+		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));	}
 
 	public ResourceLocation programId() {
 		return programId;
@@ -55,27 +57,28 @@ public final class Frame {
 		pc++;
 	}
 
-	public int waitStart() {
-		return waitStart;
+	/** @return the age this frame's wait is satisfied at, or {@link #NO_WAIT} when it is not waiting */
+	public int waitUntil() {
+		return waitUntil;
 	}
 
-	public void markWait(int age) {
-		if (waitStart < 0) {
-			waitStart = age;
-		}
+	public boolean waiting() {
+		return waitUntil != NO_WAIT;
+	}
+
+	public void waitUntil(int age) {
+		this.waitUntil = Math.max(NO_WAIT, age);
 	}
 
 	public void clearWait() {
-		waitStart = -1;
+		this.waitUntil = NO_WAIT;
 	}
 
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("id", programId.toString());
 		tag.putInt("pc", pc);
-		if (waitStart >= 0) {
-			tag.putInt("wait", waitStart);
-		}
+		tag.putInt("wait", waitUntil);
 		return tag;
 	}
 }

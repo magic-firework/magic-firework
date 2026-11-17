@@ -291,7 +291,7 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         int valueColor = (alpha << 24) | 0xFFFFFF;
 
         float speed = this.menu.displayedSpeed();
-        int fuse = this.menu.displayedFuse();
+        int flight = this.menu.displayedFlight();
 
         g.drawString(this.font, Component.translatable("screen.magic-firework.flight.speed"),
                 x + ROW_LABEL_X + slide, y + ROW1_Y, labelColor);
@@ -309,19 +309,19 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
                 interactive && speedUp && isHovering(STEP_PLUS_X + slide, ROW1_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
 
-        g.drawString(this.font, Component.translatable("screen.magic-firework.flight.fuse"),
+        g.drawString(this.font, Component.translatable("screen.magic-firework.flight.time"),
                 x + ROW_LABEL_X + slide, y + ROW2_Y, labelColor);
-        g.drawString(this.font, Component.translatable("screen.magic-firework.flight.fuse_hint"),
+        g.drawString(this.font, Component.translatable("screen.magic-firework.flight.time_hint"),
                 x + ROW_LABEL_X + slide, y + ROW2_Y + 13, hintColor);
-        g.drawString(this.font, secondsText(fuse),
+        g.drawString(this.font, secondsText(flight),
                 x + ROW_VALUE_X + slide, y + ROW2_Y, valueColor);
-        boolean fuseDown = canDecreaseFuse();
-        boolean fuseUp = canIncreaseFuse();
-        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW2_Y - 4, "-", fuseDown,
-                interactive && fuseDown && isHovering(STEP_MINUS_X + slide, ROW2_Y - 4,
+        boolean flightDown = canDecreaseFlight();
+        boolean flightUp = canIncreaseFlight();
+        drawStepButton(g, x + STEP_MINUS_X + slide, y + ROW2_Y - 4, "-", flightDown,
+                interactive && flightDown && isHovering(STEP_MINUS_X + slide, ROW2_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
-        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW2_Y - 4, "+", fuseUp,
-                interactive && fuseUp && isHovering(STEP_PLUS_X + slide, ROW2_Y - 4,
+        drawStepButton(g, x + STEP_PLUS_X + slide, y + ROW2_Y - 4, "+", flightUp,
+                interactive && flightUp && isHovering(STEP_PLUS_X + slide, ROW2_Y - 4,
                         STEP_BTN_W, STEP_BTN_H, mouseX, mouseY), alpha);
 
         drawBackButton(g, x, y, alpha, interactive, mouseX, mouseY);
@@ -538,8 +538,8 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
                 canDecreaseSpeed(), canIncreaseSpeed(), 1)) {
             return true;
         }
-        return tryStep(mouseX, mouseY, CHANNEL_FLIGHT, FireworkEditorMenu.ADJUST_FUSE, ROW2_Y, slide,
-                canDecreaseFuse(), canIncreaseFuse(), 1);
+        return tryStep(mouseX, mouseY, CHANNEL_FLIGHT, FireworkEditorMenu.ADJUST_FLIGHT_TIME, ROW2_Y, slide,
+                canDecreaseFlight(), canIncreaseFlight(), 1);
     }
 
     /** A press on a direction stepper turns one dial by {@link #DIRECTION_STEP}. */
@@ -576,18 +576,22 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
     }
 
     private boolean isOverHeldButton(double mouseX, double mouseY) {
-        int rowY = heldWhich == FireworkEditorMenu.ADJUST_SPEED || heldWhich == FireworkEditorMenu.ADJUST_YAW
-                ? ROW1_Y : ROW2_Y;
+        int rowY;
+        if (heldChannel == CHANNEL_FLIGHT) {
+            rowY = heldWhich == FireworkEditorMenu.ADJUST_FLIGHT_TIME ? ROW2_Y : ROW1_Y;
+        } else {
+            rowY = heldWhich == FireworkEditorMenu.ADJUST_YAW ? ROW1_Y : ROW2_Y;
+        }
         int bx = (heldDelta > 0 ? STEP_PLUS_X : STEP_MINUS_X) + subSlide();
         return isHovering(bx, rowY - 4, STEP_BTN_W, STEP_BTN_H, mouseX, mouseY);
     }
 
     private boolean stepAvailable(int channel, int which, int delta) {
         if (channel == CHANNEL_FLIGHT) {
-            if (which == FireworkEditorMenu.ADJUST_SPEED) {
-                return delta > 0 ? canIncreaseSpeed() : canDecreaseSpeed();
+            if (which == FireworkEditorMenu.ADJUST_FLIGHT_TIME) {
+                return delta > 0 ? canIncreaseFlight() : canDecreaseFlight();
             }
-            return delta > 0 ? canIncreaseFuse() : canDecreaseFuse();
+            return delta > 0 ? canIncreaseSpeed() : canDecreaseSpeed();
         }
         if (which == FireworkEditorMenu.ADJUST_YAW) {
             return delta > 0 ? canIncreaseYaw() : canDecreaseYaw();
@@ -615,13 +619,13 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
                 && hasMaterial(FireworkCraftingTableBlockEntity.SPEED_MATERIAL);
     }
 
-    private boolean canDecreaseFuse() {
-        return this.menu.displayedFuse() > 0;
+    private boolean canDecreaseFlight() {
+        return this.menu.displayedFlight() > 0;
     }
 
-    private boolean canIncreaseFuse() {
-        return this.menu.displayedFuse() < Attributes.FUSE_TICKS.max()
-                && hasMaterial(FireworkCraftingTableBlockEntity.FUSE_MATERIAL);
+    private boolean canIncreaseFlight() {
+        return this.menu.displayedFlight() < Attributes.FLIGHT_TICKS.max()
+                && hasMaterial(FireworkCraftingTableBlockEntity.FLIGHT_MATERIAL);
     }
 
     private boolean canDecreaseYaw() {
@@ -770,8 +774,8 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         addAttr(lines, "attr.magic-firework.flight.drag", Component.literal(fmt(Attributes.DRAG.get(overlay))));
         addAttr(lines, "attr.magic-firework.trail.enabled",
                 Component.translatable(Attributes.TRAIL.get(overlay) ? "gui.magic-firework.on" : "gui.magic-firework.off"));
-        addAttr(lines, "attr.magic-firework.fuse.ticks",
-                Component.literal(secondsText(this.menu.displayedFuse())));
+        addAttr(lines, "attr.magic-firework.flight.ticks",
+                Component.literal(secondsText(this.menu.displayedFlight())));
         addAttr(lines, "attr.magic-firework.afterglow",
                 Component.literal(Integer.toString(Attributes.AFTERGLOW.get(overlay))));
         addAttr(lines, "attr.magic-firework.max.depth",

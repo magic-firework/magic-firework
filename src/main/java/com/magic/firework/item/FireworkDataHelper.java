@@ -1,10 +1,13 @@
 package com.magic.firework.item;
 
+import java.util.List;
+
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
 import com.magic.firework.content.DefinitionIds;
 import com.magic.firework.content.FireworkProfile;
 import com.magic.firework.registry.Definitions;
+import com.magic.firework.rocket.RocketSpec;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -18,18 +21,25 @@ import net.minecraft.world.item.ItemStack;
  * <pre>
  * MagicFirework: {
  *   profile: "magic-firework:ring12",
- *   overlay: { "flight.speed": 0.2, "show": "magic-firework:cube" }   // only what changed
+ *   overlay: { "flight.speed": 0.2, "show": "magic-firework:cube" },   // only what changed
+ *   children: [                                                        // optional, crafted nesting
+ *     { profile: "magic-firework:ring", overlay: { ... }, children: [ ... ] },
+ *     ...
+ *   ]
  * }
  * </pre>
  *
- * The {@code Fireworks} tag is left untouched so the same stack is still a legal vanilla
- * firework rocket. Only the overlay is stored per item, so editing the data pack updates
- * existing items; a key a player never touched always follows the profile.
+ * The root tag and every child entry use the same shape, so {@link RocketSpec} reads and writes
+ * the whole tree with one pair of methods. Only the overlay is stored per item, so editing the
+ * data pack updates existing items; a key a player never touched always follows the profile.
+ *
+ * <p>The {@code Fireworks} tag is left untouched so the same stack is still a legal vanilla
+ * firework rocket.
  */
 public final class FireworkDataHelper {
 	public static final String ROOT = "MagicFirework";
-	public static final String PROFILE = "profile";
-	public static final String OVERLAY = "overlay";
+	public static final String PROFILE = RocketSpec.PROFILE;
+	public static final String OVERLAY = RocketSpec.OVERLAY;
 
 	private FireworkDataHelper() {
 	}
@@ -57,8 +67,17 @@ public final class FireworkDataHelper {
 		return source != null && source.contains(OVERLAY) ? AttributeBag.load(source.get(OVERLAY)) : AttributeBag.EMPTY;
 	}
 
-	public static void setProfile(ItemStack stack, ResourceLocation profileId) {
-		root(stack).putString(PROFILE, profileId.toString());
+	/** @return the whole tree this stack launches, clamped to the item nesting limits */
+	public static RocketSpec spec(ItemStack stack) {
+		return spec(root(stack));
+	}
+
+	/** Same read as {@link #spec(ItemStack)}, for a detached {@code MagicFirework} tag. */
+	public static RocketSpec spec(CompoundTag source) {
+		RocketSpec loaded = RocketSpec.load(source, profileId(source));
+		// `source` always carries a fallback id, so the only way to get null back is a tag that
+		// is not a compound at all; a plain rocket of the fallback profile is the safe answer.
+		return loaded == null ? RocketSpec.of(profileId(source)) : loaded;
 	}
 
 	public static void setOverlay(ItemStack stack, AttributeBag overlay) {
@@ -83,19 +102,33 @@ public final class FireworkDataHelper {
 	}
 
 	public static ItemStack create(Item item, ResourceLocation profileId, AttributeBag overlay) {
+		return create(item, RocketSpec.of(profileId, overlay));
+	}
+
+	public static ItemStack create(Item item, RocketSpec spec) {
 		ItemStack stack = new ItemStack(item);
-		setProfile(stack, profileId);
-		setOverlay(stack, overlay);
+		applySource(stack, spec.save());
 		return stack;
 	}
 
 	/**
-	 * @return the profile id, the profile loaded from content (may be {@code null} when the
-	 *         data pack does not provide it) and the per-item overlay
+	 * @return the tree the stack launches and the profile loaded from content (may be
+	 *         {@code null} when the data pack does not provide it)
 	 */
 	public static Resolved resolve(ItemStack stack, Definitions definitions) {
-		ResourceLocation id = profileId(stack);
-		return new Resolved(id, definitions.get(id), overlay(stack));
+		RocketSpec spec = spec(stack);
+		return new Resolved(spec, definitions.get(spec.profileId()));
+	}
+
+	/** A stack's tree plus the installed profile it names. */
+	public record Resolved(RocketSpec spec, FireworkProfile profile) {
+		public ResourceLocation id() {
+			return spec.profileId();
+		}
+
+		public AttributeBag overlay() {
+			return spec.overlay();
+		}
 	}
 
 	private static CompoundTag root(ItemStack stack) {
@@ -104,8 +137,5 @@ public final class FireworkDataHelper {
 			tag.put(ROOT, new CompoundTag());
 		}
 		return tag.getCompound(ROOT);
-	}
-
-	public record Resolved(ResourceLocation id, FireworkProfile profile, AttributeBag overlay) {
 	}
 }

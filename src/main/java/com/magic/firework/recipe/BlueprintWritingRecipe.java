@@ -2,7 +2,6 @@ package com.magic.firework.recipe;
 
 import java.util.List;
 
-import com.magic.firework.content.FireworkProfile;
 import com.magic.firework.craft.Cost;
 import com.magic.firework.craft.FormulaCost;
 import com.magic.firework.item.BlueprintDataHelper;
@@ -10,6 +9,7 @@ import com.magic.firework.item.FireworkDataHelper;
 import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.registry.ModRegistries;
+import com.magic.firework.rocket.RocketSpec;
 
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
@@ -70,14 +70,15 @@ public final class BlueprintWritingRecipe extends CustomRecipe {
 			return ItemStack.EMPTY;
 		}
 		CompoundTag source = FireworkDataHelper.source(sample);
-		ResourceLocation profileId = FireworkDataHelper.profileId(source);
+		RocketSpec spec = FireworkDataHelper.spec(source);
 		FireworkRuntime runtime = RuntimeRegistry.current();
-		FireworkProfile profile = runtime == null ? null : runtime.definitions().get(profileId);
-		if (runtime != null && profile == null) {
+		if (runtime != null && runtime.definitions().get(spec.profileId()) == null) {
 			// A data pack that does not install the profile cannot produce a launchable item.
 			return ItemStack.EMPTY;
 		}
-		List<Cost> cost = FormulaCost.of(profile, FireworkDataHelper.overlay(source));
+		List<Cost> cost = runtime == null
+				? FormulaCost.of(id -> null, spec)
+				: FormulaCost.of(runtime.definitions()::get, spec);
 		ItemStack written = new ItemStack(ModRegistries.FIREWORK_BLUEPRINT_ITEM);
 		BlueprintDataHelper.write(written, source, cost);
 		return written;

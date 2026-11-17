@@ -14,12 +14,12 @@ import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.program.Effect;
 import com.magic.firework.registry.ModRegistries;
+import com.magic.firework.rocket.RocketSpec;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -37,6 +37,7 @@ public class MagicFireworkEntity extends Entity {
 
 	private RocketBrain brain = RocketBrain.empty();
 	private boolean orphaned;
+	private boolean profileSynced;
 	private UUID ownerUuid;
 
 	public MagicFireworkEntity(EntityType<? extends MagicFireworkEntity> type, Level level) {
@@ -51,15 +52,23 @@ public class MagicFireworkEntity extends Entity {
 	}
 
 	/**
-	 * @param parent  the rocket that split this one, or {@code null} for a launch
+	 * Creates one rocket from a spec. The spec is the whole definition: the profile whose
+	 * program and defaults it runs, the per-instance overlay, and the child tree its
+	 * {@code spawn} ops may name by slot.
+	 *
+	 * @param parent the rocket that split this one, or {@code null} for a launch
 	 */
 	public static MagicFireworkEntity launch(ServerLevel level, Vec3 position, Vec3 lookDirection,
-			FireworkProfile profile, AttributeBag overlay, Entity owner, MagicFireworkEntity parent) {
+			RocketSpec spec, Entity owner, MagicFireworkEntity parent) {
 		FireworkRuntime runtime = RuntimeRegistry.current();
-		if (runtime == null || !runtime.ledger().trySpawn() || profile == null) {
+		if (runtime == null || spec == null || !runtime.ledger().trySpawn()) {
 			return null;
 		}
-		AttributeBag base = profile.defaults().overlay(overlay);
+		FireworkProfile profile = runtime.definitions().get(spec.profileId());
+		if (profile == null) {
+			return null;
+		}
+		AttributeBag base = profile.defaults().overlay(spec.overlay());
 		int depth = parent == null ? 0 : parent.depth() + 1;
 		if (parent != null && depth > Attributes.MAX_DEPTH.get(parent.bag())) {
 			return null;
@@ -67,14 +76,13 @@ public class MagicFireworkEntity extends Entity {
 		long seed = parent == null ? level.random.nextLong() : parent.brain.nextChildSeed();
 
 		MagicFireworkEntity rocket = new MagicFireworkEntity(ModRegistries.MAGIC_FIREWORK_ENTITY, level);
-		rocket.brain = RocketBrain.launch(profile.id(), profile.program(), base, seed, depth, lookDirection);
+		rocket.brain = RocketBrain.launch(spec, profile.program(), base, seed, depth, lookDirection);
 		rocket.setPos(position);
 		if (owner != null) {
 			rocket.ownerUuid = owner.getUUID();
 		}
 
 		level.addFreshEntity(rocket);
-		rocket.sendProfile(level);
 
 		if (base.has(Attributes.LAUNCH_SOUND)) {
 			Sounds.play(level, position, ResourceLocation.tryParse(base.raw().getString(Attributes.LAUNCH_SOUND)),
@@ -100,7 +108,14 @@ public class MagicFireworkEntity extends Entity {
 		AttributeBag bag = brain.bag();
 
 		if (level().isClientSide) {
-			// The client only needs the attributes: no program, no packets.
+			// The client runs the same flight step as the server. Server positions stay
+			// authoritative (a move packet snaps us back onto them), but moving here as well is
+			// what makes the rocket advance on every client tick instead of stepping at the
+			// packet rate, which is what made it look jerky.
+			if (brain.initialized()) {
+				setDeltaMovement(FlightStep.step(bag, getDeltaMovement()));
+				move(MoverType.SELF, getDeltaMovement());
+			}
 			TrailEmitter.trail(level(), position(), bag, brain.seed(), brain.age());
 			return;
 		}
@@ -112,13 +127,20 @@ public class MagicFireworkEntity extends Entity {
 		}
 		ServerLevel level = (ServerLevel) level();
 		setDeltaMovement(FlightStep.step(bag, getDeltaMovement()));
-		Effect.TickResult result = brain.tick(runtime.definitions()::program, position());
+		Effect.TickResult result = brain.tick(runtime.definitions()::program);
 		apply(level, runtime, result.effects());
 
 		this.move(MoverType.SELF, getDeltaMovement());
-		brain.setCollided(Attributes.COLLIDE.get(bag) && (horizontalCollision || verticalCollision));
+		brain.setCollided(horizontalCollision || verticalCollision);
 		orient();
 		tickPendingChildren(level, runtime);
+
+		if (!profileSynced) {
+			// Sent after the first tick so the packet carries the velocity the launch op set;
+			// a rocket nobody can see yet does not need a profile.
+			profileSynced = true;
+			sendProfile(level);
+		}
 
 		if (brain.expired()) {
 			this.discard();
@@ -132,7 +154,7 @@ public class MagicFireworkEntity extends Entity {
 			} else if (effect instanceof Effect.Burst) {
 				runtime.shows().burst(level, position(), brain.bag(), brain.seed());
 			} else if (effect instanceof Effect.SpawnChild child) {
-				scheduleChild(level, runtime, child.program(), child.spread(), child.delayTicks());
+				scheduleChild(level, runtime, child);
 			} else if (effect instanceof Effect.PlaySound sound) {
 				Sounds.play(level, position(), sound.id(), sound.volume(), sound.pitch());
 			} else if (effect instanceof Effect.Light light) {
@@ -164,12 +186,20 @@ public class MagicFireworkEntity extends Entity {
 		return brain.bag();
 	}
 
-	private void scheduleChild(ServerLevel level, FireworkRuntime runtime, ResourceLocation programId,
-			float spread, int delayTicks) {
-		if (level.isClientSide || programId == null) {
+	/**
+	 * Turns one spawn request into a rocket. A slot target reads the launching item's tree, so
+	 * what appears was decided when the item was crafted; a profile target falls back to content.
+	 * A slot the item does not fill spawns nothing, which is how a program can offer more slots
+	 * than a given rocket was built with.
+	 */
+	private void scheduleChild(ServerLevel level, FireworkRuntime runtime, Effect.SpawnChild effect) {
+		RocketSpec target = effect.target().isSlot()
+				? brain.child(effect.target().childIndex())
+				: RocketSpec.of(effect.target().profile());
+		if (target == null) {
 			return;
 		}
-		RocketBrain.Child immediate = brain.scheduleChild(programId, spread, delayTicks);
+		RocketBrain.Child immediate = brain.scheduleChild(target, effect.delayTicks());
 		if (immediate != null) {
 			spawnChildNow(level, runtime, immediate);
 		}
@@ -182,27 +212,10 @@ public class MagicFireworkEntity extends Entity {
 	}
 
 	private void spawnChildNow(ServerLevel level, FireworkRuntime runtime, RocketBrain.Child child) {
-		FireworkProfile profile = runtime.definitions().get(child.programId());
-		if (profile == null) {
-			return;
-		}
-		Vec3 forward = normalized(getDeltaMovement(), brain.lookDirection());
-		RandomSource random = RandomSource.create(child.seed());
-		Vec3 jitter = normalized(new Vec3(
-				random.nextGaussian(),
-				random.nextGaussian() * 0.4,
-				random.nextGaussian()), forward);
-		float spread = Math.max(0.0F, Math.min(1.0F, child.spread()));
-		Vec3 direction = normalized(forward.scale(1.0 - spread).add(jitter.scale(spread)), forward);
-
-		// Aim the child through attributes: its own `launch` op honours these.
-		AttributeBag aim = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "vector")
-				.withFloat(Attributes.DIRECTION_X.key(), (float) direction.x)
-				.withFloat(Attributes.DIRECTION_Y.key(), (float) direction.y)
-				.withFloat(Attributes.DIRECTION_Z.key(), (float) direction.z);
-
-		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), profile, aim, null, this);
+		// Deliberately no direction override: a split child flies the way its own
+		// profile (flight.direction.*) and its own launch op say. Injecting a vector
+		// here would win over both, because launch lets attributes override the op.
+		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), child.spec(), null, this);
 		if (entity != null) {
 			entity.setDeltaMovement(getDeltaMovement());
 		}
@@ -210,8 +223,22 @@ public class MagicFireworkEntity extends Entity {
 
 	// ── sync / persistence ───────────────────────────────────────────────────
 
-	public void acceptProfile(long seed, int age, AttributeBag base) {
+	/** Client side: bind the synced attributes and velocity, then fly. */
+	public void acceptProfile(long seed, int age, Vec3 velocity, AttributeBag base) {
 		brain.acceptClientView(base, seed, age);
+		setDeltaMovement(velocity);
+	}
+
+	/**
+	 * A player who starts tracking an already airborne rocket needs the profile too, and with the
+	 * velocity it has at that moment, otherwise their client would hold the rocket still.
+	 */
+	@Override
+	public void startSeenByPlayer(ServerPlayer player) {
+		super.startSeenByPlayer(player);
+		if (!level().isClientSide && brain.initialized()) {
+			FireworkNetworking.sendProfile(player, this);
+		}
 	}
 
 	private void sendProfile(ServerLevel level) {
@@ -269,10 +296,6 @@ public class MagicFireworkEntity extends Entity {
 		return !Attributes.DECORATIVE.get(bag());
 	}
 
-	public ResourceLocation profileId() {
-		return brain.profileId();
-	}
-
 	/** True once a program or a client profile has been bound. */
 	public boolean profileReady() {
 		return brain.initialized();
@@ -281,12 +304,5 @@ public class MagicFireworkEntity extends Entity {
 	/** Age in ticks, synced to late trackers so their trail lines up. */
 	public int programAge() {
 		return brain.age();
-	}
-
-	private static Vec3 normalized(Vec3 value, Vec3 fallback) {
-		if (value == null || value.lengthSqr() < EPSILON) {
-			return fallback;
-		}
-		return value.normalize();
 	}
 }

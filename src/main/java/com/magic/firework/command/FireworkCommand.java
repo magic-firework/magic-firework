@@ -23,6 +23,7 @@ import com.magic.firework.item.FireworkDataHelper;
 import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.registry.ModRegistries;
+import com.magic.firework.rocket.RocketSpec;
 import com.magic.firework.sim.FireworkSimulator;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -143,7 +144,7 @@ public final class FireworkCommand {
 		ServerLevel level = (ServerLevel) player.level();
 		Vec3 spawn = player.getEyePosition().add(player.getLookAngle().scale(0.5));
 		MagicFireworkEntity rocket = MagicFireworkEntity.launch(level, spawn, player.getLookAngle(),
-				profile, AttributeBag.EMPTY, player, null);
+				RocketSpec.of(id), player, null);
 		context.getSource().sendSuccess(() -> Component.literal(rocket == null
 				? "launch refused (budget or depth limit)"
 				: "launched " + id), false);
@@ -196,14 +197,14 @@ public final class FireworkCommand {
 		}
 		ItemStack blueprint = new ItemStack(ModRegistries.FIREWORK_BLUEPRINT_ITEM);
 		if (id != null) {
-			FireworkProfile profile = runtime.definitions().get(id);
-			if (profile == null) {
+			if (runtime.definitions().get(id) == null) {
 				context.getSource().sendFailure(Component.literal("unknown profile " + id));
 				return 0;
 			}
-			ItemStack sample = FireworkDataHelper.create(ModRegistries.MAGIC_FIREWORK_ITEM, id, AttributeBag.EMPTY);
+			RocketSpec spec = RocketSpec.of(id);
+			ItemStack sample = FireworkDataHelper.create(ModRegistries.MAGIC_FIREWORK_ITEM, spec);
 			BlueprintDataHelper.write(blueprint, FireworkDataHelper.source(sample),
-					FormulaCost.of(profile, AttributeBag.EMPTY));
+					FormulaCost.of(runtime.definitions()::get, spec));
 		}
 		if (!player.getInventory().add(blueprint)) {
 			player.drop(blueprint, false);
@@ -353,8 +354,8 @@ public final class FireworkCommand {
 			context.getSource().sendFailure(Component.literal("unknown profile " + id));
 			return 0;
 		}
-		FireworkSimulator.Result result = FireworkSimulator.run(profile.program(), runtime.definitions()::program,
-				profile.defaults(), Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), ticks, 0.0);
+		FireworkSimulator.Result result = FireworkSimulator.run(profile.program(), RocketSpec.of(id),
+				runtime.definitions()::program, profile.defaults(), Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), ticks, 0.0);
 		StringBuilder trace = new StringBuilder();
 		trace.append(id).append(": finished=").append(result.finished())
 				.append(" ticks=").append(result.liveTicks())

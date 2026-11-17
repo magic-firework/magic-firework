@@ -2,13 +2,20 @@
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
     "show": "magic-firework:cube",
-    "launch.sound": "minecraft:entity.firework_rocket.launch"
+    "launch.sound": "minecraft:entity.firework_rocket.launch",
+    "afterglow": 20,
+    "flight.ticks": 30
   },
   "program": [
-    { "op": "launch", "speed": 0.25 },
-    { "op": "await", "ticks": 30 },
-    { "op": "burst" },
-    { "op": "await", "ticks": 20 },
-    { "op": "end" }
+    {
+      "op": "launch",
+      "speed": 0.25
+    },
+    {
+      "op": "wait"
+    },
+    {
+      "op": "burst"
+    }
   ]
 }

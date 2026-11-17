@@ -17,7 +17,8 @@ public sealed interface Effect {
 	record Burst() implements Effect {
 	}
 
-	record SpawnChild(ResourceLocation program, float spread, int delayTicks) implements Effect {
+	/** A split child: the target decides whether it comes from the item's tree or from content. */
+	record SpawnChild(SpawnTarget target, int delayTicks) implements Effect {
 	}
 
 	record PlaySound(ResourceLocation id, float volume, float pitch) implements Effect {
