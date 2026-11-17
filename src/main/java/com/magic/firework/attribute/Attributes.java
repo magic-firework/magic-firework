@@ -70,4 +70,12 @@ public final class Attributes {
 	// ── content ──────────────────────────────────────────────────────────────
 	/** Id of the {@code Show} a {@code burst} op bakes. This is the only content source. */
 	public static final String SHOW = "show";
+	/**
+	 * Make every burst of this rocket flicker, the way a vanilla firework star's Flicker flag
+	 * makes its sparks blink back instead of fading once.
+	 *
+	 * <p>It is an attribute rather than a program op because it belongs to the rocket, not to a
+	 * step: the crafting table (or an item's NBT) can set it without touching a data pack.
+	 */
+	public static final Attr.BoolAttr FLICKER = new Attr.BoolAttr("flicker", false);
 }

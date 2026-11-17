@@ -38,8 +38,13 @@ public final class ShowService {
 		this.scheduled = scheduled;
 	}
 
-	/** Handle one {@code burst} op. */
-	public void burst(ServerLevel level, Vec3 origin, AttributeBag bag, long seed) {
+	/**
+	 * Handle one {@code burst} op.
+	 *
+	 * @param flicker whether a {@code flicker} op armed this explosion; it changes how the client
+	 *                replays the same points, not what the server bakes
+	 */
+	public void burst(ServerLevel level, Vec3 origin, AttributeBag bag, long seed, boolean flicker) {
 		if (bag == null) {
 			return;
 		}
@@ -63,7 +68,7 @@ public final class ShowService {
 				continue;
 			}
 			if (ServerPlayNetworking.canSend(player, FireworkNetworking.CLOUD_CHANNEL)) {
-				FireworkNetworking.sendCloud(player, origin, plan.stream());
+				FireworkNetworking.sendCloud(player, origin, plan.stream(), flicker);
 			}
 		}
 		scheduled.schedule(level, origin, plan.events(), level.getGameTime());

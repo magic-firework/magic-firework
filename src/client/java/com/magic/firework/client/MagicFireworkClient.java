@@ -31,7 +31,8 @@ public class MagicFireworkClient implements ClientModInitializer {
 				(client, handler, buf, responseSender) -> {
 					FireworkNetworking.CloudPacket packet = FireworkNetworking.readCloud(buf);
 					if (packet != null) {
-						client.execute(() -> CloudPlayer.accept(client, packet.origin(), packet.stream()));
+						client.execute(() -> CloudPlayer.accept(client, packet.origin(), packet.stream(),
+							packet.flicker()));
 					}
 				});
 

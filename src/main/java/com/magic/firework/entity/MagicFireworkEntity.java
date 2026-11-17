@@ -152,7 +152,8 @@ public class MagicFireworkEntity extends Entity {
 			if (effect instanceof Effect.SetVelocity set) {
 				setDeltaMovement(set.velocity());
 			} else if (effect instanceof Effect.Burst) {
-				runtime.shows().burst(level, position(), brain.bag(), brain.seed());
+				AttributeBag bag = brain.bag();
+				runtime.shows().burst(level, position(), bag, brain.seed(), Attributes.FLICKER.get(bag));
 			} else if (effect instanceof Effect.SpawnChild child) {
 				scheduleChild(level, runtime, child);
 			} else if (effect instanceof Effect.PlaySound sound) {

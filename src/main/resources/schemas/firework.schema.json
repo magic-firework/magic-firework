@@ -61,6 +61,11 @@
           "default": "up",
           "description": "The only source of launch direction. up goes straight up; relative reads flight.direction.yaw/pitch from the launcher's heading."
         },
+        "flicker": {
+          "type": "boolean",
+          "default": false,
+          "description": "Make every burst of this rocket flicker like a vanilla firework star with Flicker set: the sparks blink back instead of fading once."
+        },
         "decorative": {
           "type": "boolean",
           "default": true,
