@@ -7,8 +7,7 @@
       11141375
     ],
     "show": "magic-firework:ball_small",
-    "launch.sound": "minecraft:entity.firework_rocket.launch",
-    "max.depth": 3
+    "launch.sound": "minecraft:entity.firework_rocket.launch"
   },
   "program": [
     {

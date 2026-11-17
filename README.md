@@ -47,9 +47,9 @@ when the list ends.
 vanilla firework star with Flicker set, and an item can carry it as an overlay
 (`/give ... {MagicFirework:{profile:"...",overlay:{"flicker":true}}}`) without touching content.
 
-Direction comes only from the attributes, never from an op: `flight.direction.mode` is `up` by
-default, or `relative` with `flight.direction.yaw` / `pitch` measured from whoever launched the
-rocket — that is what the crafting table's two dials write.
+Direction comes only from the attributes, never from an op: `flight.direction.yaw` / `pitch` are
+measured from whoever launched the rocket — that is what the crafting table's two dials write.
+Both at 0° is a straight ascent, so an untouched firework needs no direction key at all.
 
 Hitting a block ends the current `wait`, so an impact bursts on the spot.
 
@@ -70,8 +70,8 @@ the item does not fill spawns nothing, so `magic-firework:staged` (which offers 
 on its own and splits only when the item brings children. There is no in-game way to compose the tree yet — the
 editor will build it; until then it comes from item NBT.
 
-Reads are bounded by `FireworkLimits.maxNestingDepth` / `maxNestingNodes`, and `max.depth` /
-`max.children` still decide at launch time how far a show may go.
+Reads are bounded by `FireworkLimits.maxNestingNodes`, and `FireworkLimits.maxDepth` /
+`maxChildren` decide at launch time how far a show may go — no attribute can raise them.
 
 ## License
 

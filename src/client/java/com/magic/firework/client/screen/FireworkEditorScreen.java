@@ -770,16 +770,12 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
         // Speed and flight time come from the menu's synced values, which include the profile
         // defaults — the overlay alone would show the generic default before any edit.
         addAttr(lines, "attr.magic-firework.flight.speed", Component.literal(fmt(this.menu.displayedSpeed())));
-        addAttr(lines, "attr.magic-firework.flight.gravity", Component.literal(fmt(Attributes.GRAVITY.get(overlay))));
-        addAttr(lines, "attr.magic-firework.flight.drag", Component.literal(fmt(Attributes.DRAG.get(overlay))));
         addAttr(lines, "attr.magic-firework.trail.enabled",
                 Component.translatable(Attributes.TRAIL.get(overlay) ? "gui.magic-firework.on" : "gui.magic-firework.off"));
         addAttr(lines, "attr.magic-firework.flight.ticks",
                 Component.literal(secondsText(this.menu.displayedFlight())));
         addAttr(lines, "attr.magic-firework.afterglow",
                 Component.literal(Integer.toString(Attributes.AFTERGLOW.get(overlay))));
-        addAttr(lines, "attr.magic-firework.max.depth",
-                Component.literal(Integer.toString(Attributes.MAX_DEPTH.get(overlay))));
         addAttr(lines, "attr.magic-firework.show", Component.literal(showText(overlay)));
         return lines;
     }

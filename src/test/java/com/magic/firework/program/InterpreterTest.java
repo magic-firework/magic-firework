@@ -10,6 +10,7 @@ import java.util.Map;
 
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
+import com.magic.firework.config.FireworkLimits;
 
 import org.junit.jupiter.api.Test;
 
@@ -129,16 +130,16 @@ class InterpreterTest {
 	}
 
 	@Test
-	void spawnRespectsChildLimit() {
+	void spawnRespectsTheConfigChildLimit() {
 		Program child = program(CHILD, new Op.End());
-		Program root = program(ROOT, new Op.Spawn(copies(CHILD, 8), 0), new Op.End());
-		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.MAX_CHILDREN.key(), 3);
-		ProgramState state = ProgramState.start(root, base, 1L, 0);
+		Program root = program(ROOT, new Op.Spawn(copies(CHILD, FireworkLimits.maxChildren + 8), 0), new Op.End());
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 
 		List<Effect> effects = tick(state, lookup(root, child));
 
-		assertEquals(3, effects.stream().filter(effect -> effect instanceof Effect.SpawnChild).count());
-		assertEquals(3, state.childCount());
+		assertEquals(FireworkLimits.maxChildren,
+				effects.stream().filter(effect -> effect instanceof Effect.SpawnChild).count());
+		assertEquals(FireworkLimits.maxChildren, state.childCount());
 	}
 
 	@Test
@@ -161,7 +162,6 @@ class InterpreterTest {
 				new Op.End());
 		// The op says up; the item says "90° to the right of whoever launched me".
 		AttributeBag base = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "relative")
 				.withFloat(Attributes.DIRECTION_YAW.key(), 90.0F)
 				.withFloat(Attributes.DIRECTION_PITCH.key(), 90.0F);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
@@ -200,7 +200,6 @@ class InterpreterTest {
 
 	private static Vec3 relativeVelocity(Program root, ProgramLookup lookup, float yaw, float pitch, Vec3 facing) {
 		AttributeBag base = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "relative")
 				.withFloat(Attributes.DIRECTION_YAW.key(), yaw)
 				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
@@ -373,9 +372,7 @@ class InterpreterTest {
 	void spawnedChildKeepsItsOwnDirectionAttributes() {
 		Program child = program(CHILD, new Op.Launch(0.2F),
 				new Op.End());
-		AttributeBag childDefaults = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "up");
-		ProgramState state = ProgramState.start(child, childDefaults, 1L, 1);
+		ProgramState state = ProgramState.start(child, AttributeBag.EMPTY, 1L, 1);
 		ProgramLookup lookup = lookup(child);
 
 		state.tickAge();

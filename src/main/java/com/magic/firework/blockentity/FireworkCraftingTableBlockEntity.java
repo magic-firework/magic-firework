@@ -138,7 +138,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 
 		// The launch resolves the vector from the launcher's heading at launch time.
 		AttributeBag overlay = resolved.overlay()
-				.withString(Attributes.DIRECTION_MODE.key(), "relative")
 				.withFloat(Attributes.DIRECTION_YAW.key(), yaw)
 				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch);
 

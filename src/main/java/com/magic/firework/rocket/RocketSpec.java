@@ -18,13 +18,14 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>This is the payload of a launch. An item carries it in its {@code MagicFirework} tag, a
  * rocket entity keeps it for its whole life (a delayed child still needs its own subtree after
- * the chunk reloads), and a blueprint records it as written. Because a crafted rocket can hold
- * rockets that hold rockets, the tree is the only place nesting depth lives in the data; the
- * runtime depth check is enforced separately by the {@code max.depth} attribute at launch.
+ * the chunk reloads), and a blueprint records it as written. The tree describes <em>shape</em>
+ * only: how deep a show may split is a runtime budget ({@link FireworkLimits#maxDepth}), decided
+ * at launch, not a property of the data.
  *
  * <p>The tree is read from item NBT, which a player can forge, so both {@link #save()} and
- * {@link #load(Tag, ResourceLocation)} are bounded: {@link FireworkLimits#maxNestingDepth}
- * levels and {@link FireworkLimits#maxNestingNodes} rockets in total.
+ * {@link #load(Tag, ResourceLocation)} are bounded by {@link FireworkLimits#maxNestingNodes}
+ * rockets in total. A chain spends one node per level, so that one number is also the deepest
+ * chain an item can describe.
  */
 public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<RocketSpec> children) {
 	public static final String PROFILE = "profile";
@@ -57,7 +58,7 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	}
 
 	public CompoundTag save() {
-		return write(this, FireworkLimits.maxNestingDepth, new int[] { FireworkLimits.maxNestingNodes });
+		return write(this, new int[] { FireworkLimits.maxNestingNodes });
 	}
 
 	/**
@@ -67,8 +68,7 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	 * @return the spec, or {@code null} when the tag is not a rocket at all
 	 */
 	public static RocketSpec load(Tag tag, ResourceLocation fallbackProfile) {
-		return read(tag, fallbackProfile, FireworkLimits.maxNestingDepth,
-				new int[] { FireworkLimits.maxNestingNodes });
+		return read(tag, fallbackProfile, new int[] { FireworkLimits.maxNestingNodes });
 	}
 
 	public static RocketSpec load(Tag tag) {
@@ -77,27 +77,27 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 
 	// ── codec ────────────────────────────────────────────────────────────────
 
-	private static CompoundTag write(RocketSpec spec, int depthLeft, int[] nodes) {
+	private static CompoundTag write(RocketSpec spec, int[] nodes) {
 		CompoundTag tag = new CompoundTag();
 		tag.putString(PROFILE, spec.profileId().toString());
 		if (!spec.overlay().isEmpty()) {
 			tag.put(OVERLAY, spec.overlay().save());
 		}
 		nodes[0]--;
-		if (depthLeft > 1 && nodes[0] > 0 && !spec.children().isEmpty()) {
+		if (nodes[0] > 0 && !spec.children().isEmpty()) {
 			ListTag list = new ListTag();
 			for (RocketSpec child : spec.children()) {
 				if (nodes[0] <= 0) {
 					break;
 				}
-				list.add(write(child, depthLeft - 1, nodes));
+				list.add(write(child, nodes));
 			}
 			tag.put(CHILDREN, list);
 		}
 		return tag;
 	}
 
-	private static RocketSpec read(Tag tag, ResourceLocation fallbackProfile, int depthLeft, int[] nodes) {
+	private static RocketSpec read(Tag tag, ResourceLocation fallbackProfile, int[] nodes) {
 		if (!(tag instanceof CompoundTag compound) || nodes[0] <= 0) {
 			return null;
 		}
@@ -108,13 +108,13 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 		nodes[0]--;
 		AttributeBag overlay = AttributeBag.load(compound.get(OVERLAY));
 		List<RocketSpec> children = List.of();
-		if (depthLeft > 1 && compound.get(CHILDREN) instanceof ListTag list && !list.isEmpty()) {
+		if (compound.get(CHILDREN) instanceof ListTag list && !list.isEmpty()) {
 			List<RocketSpec> built = new ArrayList<>(Math.min(list.size(), nodes[0]));
 			for (int i = 0; i < list.size(); i++) {
 				if (nodes[0] <= 0) {
 					break;
 				}
-				RocketSpec child = read(list.get(i), fallbackProfile, depthLeft - 1, nodes);
+				RocketSpec child = read(list.get(i), fallbackProfile, nodes);
 				if (child != null) {
 					built.add(child);
 				}

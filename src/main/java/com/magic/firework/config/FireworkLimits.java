@@ -5,24 +5,49 @@ public final class FireworkLimits {
 	private FireworkLimits() {
 	}
 
-	/** Default nesting depth allowed below a rocket; the {@code max.depth} attribute's default. */
+	/** Hardest cap on the nesting depth below a rocket, whatever the content asks for. */
 	public static final int maxDepth = 3;
-	/** Ceiling of the {@code max.depth} attribute, so a forged item cannot ask for more. */
-	public static final int maxDepthCeiling = 16;
-	/** Default children a single rocket may create over its whole life; the {@code max.children} default. */
+	/**
+	 * Children a single rocket may create over its whole life.
+	 *
+	 * <p>Kept below {@link #maxNestingNodes} on purpose: a budget of its own, so a split show can
+	 * never spend the whole item tree in one generation.
+	 */
 	public static final int maxChildren = 32;
-	/** Ceiling of the {@code max.children} attribute. */
+	/**
+	 * Ceiling of the {@code count} a single {@code spawn} op may ask for; anything past the
+	 * runtime budget is simply never reached.
+	 */
 	public static final int maxChildrenCeiling = 256;
 	/**
-	 * Hard cap on the depth of the nesting tree one item may carry, counting the rocket itself.
+	 * Hard ceiling on a rocket's velocity in blocks/tick.
 	 *
-	 * <p>Separate from {@link #maxDepth} on purpose: that attribute decides at launch time how
-	 * deep a show may go, this one decides how much recursion an item's NBT may contain at all,
-	 * so a forged stack cannot make the loader walk an unbounded tree.
+	 * <p>A launch moves at the speed its {@code launch} op or {@code flight.speed} asked for, and
+	 * that is already clamped to this number; the brake only ever makes it smaller. The cap is the
+	 * backstop that keeps a forged or future velocity from teleporting it across the world.
 	 */
-	public static final int maxNestingDepth = 8;
-	/** Hard cap on how many rockets one item's nesting tree may describe, the root included. */
-	public static final int maxNestingNodes = 64;
+	public static final double maxSpeed = 4.0;
+	/**
+	 * Per-tick brake along the flight line: the vanilla gravity value, so a rocket slows down at
+	 * the rate a falling entity speeds up.
+	 *
+	 * <p>The rocket applies it itself (see {@code FlightStep}) instead of switching vanilla gravity
+	 * on, for two reasons: 1.20.1 only applies gravity inside {@code LivingEntity.travel}, which
+	 * pulls unconditionally <em>downward</em> — the rocket has to stop at rest and hover instead of
+	 * falling back on the player, and a diagonally aimed shot has to slow down the same way a
+	 * vertical one does.
+	 */
+	public static final double deceleration = 0.08;
+	/**
+	 * Hard cap on how many rockets one item's nesting tree may describe, the root included.
+	 *
+	 * <p>This is the only structural bound on an item tree, and it is enough: a chain spends one
+	 * node per level, so a forged stack can never make the loader walk deeper than this many
+	 * rockets. How deep a show may <em>actually</em> split is a separate runtime budget
+	 * ({@link #maxDepth}); the two are deliberately independent, so raising the data budget never
+	 * raises what a launch is allowed to do.
+	 */
+	public static final int maxNestingNodes = 128;
 	/** Global cap of rocket entities spawned per server tick. */
 	public static final int maxSpawnsPerTick = 64;
 	/** Maximum call-stack depth of the instruction interpreter (nested {@code call} ops). */

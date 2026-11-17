@@ -7,7 +7,9 @@ import com.magic.firework.config.FireworkLimits;
 import com.magic.firework.content.ContentRef;
 import com.magic.firework.core.Budget;
 import com.magic.firework.core.Seed;
+import com.magic.firework.core.Transform;
 import com.magic.firework.core.eval.Evaluate;
+import com.magic.firework.core.eval.FrameStream;
 import com.magic.firework.core.eval.Plan;
 import com.magic.firework.core.show.Show;
 import com.magic.firework.network.FireworkNetworking;
@@ -16,6 +18,9 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The bridge from a firework's attribute bag to the show pipeline.
@@ -60,6 +65,10 @@ public final class ShowService {
 		if (plan.isEmpty()) {
 			return;
 		}
+		// A show is baked once and shared by every burst; whatever differs per rocket is applied
+		// here, so one primitive can serve every node of a figure.
+		Transform adjust = adjust(bag);
+		FrameStream stream = plan.stream().transformed(adjust, color(bag));
 		double radius = FireworkLimits.maxShowDistance;
 		boolean cull = radius > 0.0;
 		double limit = radius * radius;
@@ -68,10 +77,39 @@ public final class ShowService {
 				continue;
 			}
 			if (ServerPlayNetworking.canSend(player, FireworkNetworking.CLOUD_CHANNEL)) {
-				FireworkNetworking.sendCloud(player, origin, plan.stream(), flicker);
+				FireworkNetworking.sendCloud(player, origin, stream, flicker);
 			}
 		}
-		scheduled.schedule(level, origin, plan.events(), level.getGameTime());
+		scheduled.schedule(level, origin, moved(plan.events(), adjust), level.getGameTime());
+	}
+
+	/** @return the per-burst geometry, or {@code null} when the burst uses the show as written */
+	private static Transform adjust(AttributeBag bag) {
+		float size = Attributes.SHOW_SIZE.get(bag);
+		float yaw = Attributes.SHOW_YAW.get(bag);
+		float pitch = Attributes.SHOW_PITCH.get(bag);
+		if (size == 1.0F && yaw == 0.0F && pitch == 0.0F) {
+			return null;
+		}
+		return Transform.rotation(Math.toRadians(pitch), Math.toRadians(yaw), 0.0, size);
+	}
+
+	/** @return the per-burst colour override, or {@code null} when the show's palette decides */
+	private static Integer color(AttributeBag bag) {
+		return bag.has(Attributes.SHOW_COLOR) ? bag.raw().getInt(Attributes.SHOW_COLOR) : null;
+	}
+
+	/** Event offsets ride the same transform as the points, so a sound stays on the figure. */
+	private static List<Plan.ScheduledEvent> moved(List<Plan.ScheduledEvent> events, Transform adjust) {
+		if (adjust == null || events.isEmpty()) {
+			return events;
+		}
+		List<Plan.ScheduledEvent> moved = new ArrayList<>(events.size());
+		for (Plan.ScheduledEvent event : events) {
+			moved.add(new Plan.ScheduledEvent(event.kind(), event.time(), adjust.apply(event.at()),
+					event.target(), event.a(), event.b()));
+		}
+		return List.copyOf(moved);
 	}
 
 	private Plan plan(Show show, long seed, int points) {
