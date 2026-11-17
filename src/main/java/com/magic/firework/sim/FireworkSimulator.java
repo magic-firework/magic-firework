@@ -11,6 +11,7 @@ import com.magic.firework.program.InterpreterContext;
 import com.magic.firework.program.Program;
 import com.magic.firework.program.ProgramLookup;
 import com.magic.firework.program.ProgramState;
+import com.magic.firework.rocket.RocketSpec;
 
 import net.minecraft.world.phys.Vec3;
 
@@ -42,10 +43,12 @@ public final class FireworkSimulator {
 	}
 
 	/**
+	 * @param spec     the rocket being simulated, so a {@code children} slot can be resolved the
+	 *                 same way the entity does; {@code null} simulates a plain content rocket
 	 * @param groundY  position at or below which the rocket is considered to have hit
 	 *                 the ground (use {@link Double#NEGATIVE_INFINITY} to disable)
 	 */
-	public static Result run(Program root, ProgramLookup lookup, AttributeBag base, Vec3 start,
+	public static Result run(Program root, RocketSpec spec, ProgramLookup lookup, AttributeBag base, Vec3 start,
 			Vec3 lookDirection, int maxTicks, double groundY) {
 		ProgramState state = ProgramState.start(root, base, 0L, 0);
 		Vec3 position = start;
@@ -62,15 +65,18 @@ public final class FireworkSimulator {
 			AttributeBag bag = state.bag();
 			velocity = FlightStep.step(bag, velocity);
 
-			InterpreterContext ctx = new InterpreterContext(lookup, position, lookDirection, collided);
+			InterpreterContext ctx = new InterpreterContext(lookup, lookDirection);
 			Effect.TickResult result = Interpreter.tick(state, ctx);
 			for (Effect effect : result.effects()) {
 				if (effect instanceof Effect.SetVelocity set) {
 					velocity = set.velocity();
 				} else if (effect instanceof Effect.Burst) {
 					bursts++;
-				} else if (effect instanceof Effect.SpawnChild) {
-					children++;
+				} else if (effect instanceof Effect.SpawnChild child) {
+					// A slot the item does not fill spawns nothing, exactly like on the server.
+					if (!child.target().isSlot() || (spec != null && spec.child(child.target().childIndex()) != null)) {
+						children++;
+					}
 				}
 			}
 			samples.add(new Sample(state.age(), position, velocity, result.effects()));

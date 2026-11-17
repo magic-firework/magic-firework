@@ -1,5 +1,7 @@
 package com.magic.firework.attribute;
 
+import com.magic.firework.config.FireworkLimits;
+
 /**
  * Every built-in attribute key.
  *
@@ -20,11 +22,14 @@ public final class Attributes {
 	public static final Attr.FloatAttr MAX_SPEED = new Attr.FloatAttr("flight.max_speed", 4.0F, 0.0F, 8.0F);
 	/** Velocity multiplier per tick (1.0 = no drag). */
 	public static final Attr.FloatAttr DRAG = new Attr.FloatAttr("flight.drag", 0.99F, 0.0F, 1.0F);
-	/** {@code up} | {@code look} | {@code vector}. */
+	/**
+	 * Flight time in ticks: what a {@code wait} without a number spends, and therefore how long
+	 * the rocket rises before whatever the program does next. The crafting table edits this, so
+	 * the player owns it and a data pack never has to guess.
+	 */
+	public static final Attr.IntAttr FLIGHT_TICKS = new Attr.IntAttr("flight.ticks", 40, 0, 400);
+	/** {@code up} | {@code look} | {@code relative}. */
 	public static final Attr.StringAttr DIRECTION_MODE = new Attr.StringAttr("flight.direction.mode", "up");
-	public static final Attr.FloatAttr DIRECTION_X = new Attr.FloatAttr("flight.direction.x", 0.0F, -1.0F, 1.0F);
-	public static final Attr.FloatAttr DIRECTION_Y = new Attr.FloatAttr("flight.direction.y", 1.0F, -1.0F, 1.0F);
-	public static final Attr.FloatAttr DIRECTION_Z = new Attr.FloatAttr("flight.direction.z", 0.0F, -1.0F, 1.0F);
 	/**
 	 * The direction editor's two dials in degrees (0–360), relative to whoever launches the
 	 * rocket: horizontal 0° is straight ahead, growing toward their right, and the vertical dial
@@ -35,16 +40,16 @@ public final class Attributes {
 	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 360.0F);
 
 	// ── behaviour ────────────────────────────────────────────────────────────
-	/** Explode on the first block/entity collision. */
-	public static final Attr.BoolAttr COLLIDE = new Attr.BoolAttr("collide", true);
 	/** Pure display: immune to damage, ignored by entity targeting. */
 	public static final Attr.BoolAttr DECORATIVE = new Attr.BoolAttr("decorative", true);
 	/** Ticks the entity stays alive after its program ends. */
 	public static final Attr.IntAttr AFTERGLOW = new Attr.IntAttr("afterglow", 0, 0, 200);
 	/** Maximum nested split depth (0 = this rocket may not spawn children). */
-	public static final Attr.IntAttr MAX_DEPTH = new Attr.IntAttr("max.depth", 3, 0, 16);
+	public static final Attr.IntAttr MAX_DEPTH = new Attr.IntAttr("max.depth", FireworkLimits.maxDepth, 0,
+			FireworkLimits.maxDepthCeiling);
 	/** Maximum children this rocket may spawn over its whole life. */
-	public static final Attr.IntAttr MAX_CHILDREN = new Attr.IntAttr("max.children", 32, 0, 256);
+	public static final Attr.IntAttr MAX_CHILDREN = new Attr.IntAttr("max.children", FireworkLimits.maxChildren, 0,
+			FireworkLimits.maxChildrenCeiling);
 
 	// ── trail ────────────────────────────────────────────────────────────────
 	public static final Attr.BoolAttr TRAIL = new Attr.BoolAttr("trail.enabled", true);
@@ -57,8 +62,6 @@ public final class Attributes {
 	public static final String LAUNCH_SOUND = "launch.sound";
 
 	// ── op parameters ────────────────────────────────────────────────────────
-	/** Tick offset of every {@code "at": "fuse"} instruction; the crafting table stretches it. */
-	public static final Attr.IntAttr FUSE_TICKS = new Attr.IntAttr("fuse.ticks", 40, 0, 400);
 	public static final String SOUND_ID = "sound.id";
 	public static final Attr.FloatAttr SOUND_VOLUME = new Attr.FloatAttr("sound.volume", 1.0F, 0.0F, 8.0F);
 	public static final Attr.FloatAttr SOUND_PITCH = new Attr.FloatAttr("sound.pitch", 1.0F, 0.5F, 2.0F);

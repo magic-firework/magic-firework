@@ -12,13 +12,10 @@ import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.screen.FireworkEditorMenu;
 
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -34,7 +31,7 @@ import net.minecraft.world.phys.Vec3;
  * drops the packet instead of misreading it.
  */
 public final class FireworkNetworking {
-	public static final int PROTOCOL_VERSION = 1;
+	public static final int PROTOCOL_VERSION = 2;
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
@@ -100,6 +97,10 @@ public final class FireworkNetworking {
 		buf.writeVarInt(entity.getId());
 		buf.writeLong(entity.seed());
 		buf.writeVarInt(entity.programAge());
+		Vec3 velocity = entity.getDeltaMovement();
+		buf.writeDouble(velocity.x);
+		buf.writeDouble(velocity.y);
+		buf.writeDouble(velocity.z);
 		buf.writeNbt(entity.bag().without(Attributes.SHOW).save());
 		ServerPlayNetworking.send(player, PROFILE_CHANNEL, buf);
 	}
@@ -113,11 +114,13 @@ public final class FireworkNetworking {
 		int entityId = buf.readVarInt();
 		long seed = buf.readLong();
 		int age = buf.readVarInt();
+		Vec3 velocity = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
 		AttributeBag bag = AttributeBag.load(buf.readNbt());
-		return new Profile(entityId, seed, age, bag);
+		return new Profile(entityId, seed, age, velocity, bag);
 	}
 
-	public record Profile(int entityId, long seed, int age, AttributeBag bag) {
+	/** A rocket's client view: what it looks like, and how fast it was going when this was sent. */
+	public record Profile(int entityId, long seed, int age, Vec3 velocity, AttributeBag bag) {
 	}
 
 	public static void sendCloud(ServerPlayer player, Vec3 origin, FrameStream stream) {

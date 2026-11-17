@@ -33,7 +33,7 @@ public final class ProgramState {
 		state.base = base == null ? AttributeBag.EMPTY : base;
 		state.seed = seed;
 		state.depth = depth;
-		state.stack.add(new Frame(root, 0));
+		state.stack.add(new Frame(root));
 		state.initialized = true;
 		return state;
 	}
@@ -99,6 +99,18 @@ public final class ProgramState {
 		age++;
 	}
 
+	/**
+	 * A collision ends any wait in progress: the flight time is over the moment the rocket hits,
+	 * so the op after the wait runs on the next tick instead of later.
+	 */
+	public void satisfyWaits() {
+		for (Frame frame : stack) {
+			if (frame.waiting()) {
+				frame.waitUntil(age);
+			}
+		}
+	}
+
 	public void push(Program program) {
 		if (program == null) {
 			return;
@@ -112,7 +124,7 @@ public final class ProgramState {
 				return;
 			}
 		}
-		stack.add(new Frame(program, age));
+		stack.add(new Frame(program));
 	}
 
 	public void pop() {

@@ -23,10 +23,6 @@ public record Show(Id id, int[] palette, List<Stamp> stamps) {
 		return palette.length;
 	}
 
-	public int[] paletteCopy() {
-		return palette.clone();
-	}
-
 	/** Palette lookup with wrap-around, returned as opaque ARGB. */
 	public int color(int index) {
 		int rgb = palette[Math.floorMod(index, palette.length)];

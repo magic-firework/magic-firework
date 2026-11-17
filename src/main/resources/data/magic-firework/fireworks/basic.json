@@ -1,7 +1,6 @@
 {
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
-    "flight.direction.mode": "up",
     "show": "magic-firework:ball",
     "launch.sound": "minecraft:entity.firework_rocket.launch"
   },
@@ -10,8 +9,10 @@
       "op": "launch"
     },
     {
-      "op": "burst",
-      "at": "fuse"
+      "op": "wait"
+    },
+    {
+      "op": "burst"
     }
   ]
 }

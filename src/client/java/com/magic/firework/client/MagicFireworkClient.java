@@ -5,27 +5,14 @@ import com.magic.firework.client.screen.FireworkEditorScreen;
 import com.magic.firework.network.FireworkNetworking;
 import com.magic.firework.registry.ModRegistries;
 
-import com.mojang.blaze3d.platform.InputConstants;
-
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.screens.MenuScreens;
-
-import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.screens.MenuScreens;
 
 public class MagicFireworkClient implements ClientModInitializer {
-	public static final KeyMapping EDITOR_KEY = KeyBindingHelper.registerKeyBinding(
-			new KeyMapping("key.magic-firework.open_editor", InputConstants.Type.KEYSYM,
-					GLFW.GLFW_KEY_K, "key.categories.magic-firework"));
-
 	@Override
 	public void onInitializeClient() {
 		EntityRendererRegistry.register(ModRegistries.MAGIC_FIREWORK_ENTITY, MagicFireworkEntityRenderer::new);

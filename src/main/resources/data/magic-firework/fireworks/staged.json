@@ -2,8 +2,7 @@
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
     "flight.speed": 0.15,
-    "flight.direction.mode": "up",
-    "fuse.ticks": 25,
+    "flight.ticks": 25,
     "trail.colors": [
       11141375
     ],
@@ -16,12 +15,14 @@
       "op": "launch"
     },
     {
-      "op": "burst",
-      "at": "fuse"
+      "op": "wait"
+    },
+    {
+      "op": "burst"
     },
     {
       "op": "spawn",
-      "program": "magic-firework:ring",
+      "profile": "magic-firework:ring",
       "count": 4,
       "delay": 2
     }

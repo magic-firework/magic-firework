@@ -2,8 +2,7 @@
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
     "flight.speed": 0.2,
-    "flight.direction.mode": "up",
-    "fuse.ticks": 45,
+    "flight.ticks": 45,
     "trail.colors": [
       16755200
     ],
@@ -17,8 +16,10 @@
       "op": "launch"
     },
     {
-      "op": "burst",
-      "at": "fuse"
+      "op": "wait"
+    },
+    {
+      "op": "burst"
     }
   ]
 }

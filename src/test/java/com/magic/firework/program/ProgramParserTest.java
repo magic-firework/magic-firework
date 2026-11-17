@@ -13,19 +13,20 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.Vec3;
 
 class ProgramParserTest {
 	private static final ResourceLocation ID = new ResourceLocation("test", "program");
+	private static final ResourceLocation CHILD = new ResourceLocation("test", "child");
 
 	@Test
-	void parsesEveryOpAndItsTiming() throws Exception {
+	void parsesEveryOp() throws Exception {
 		String json = """
 				[
-				  { "op": "launch", "direction": "vector", "vector": [0.0, 1.0, 0.0], "speed": 0.2 },
-				  { "op": "burst", "at": "fuse", "when": { "height": 42.0, "timeout": 100 } },
-				  { "op": "call", "program": "test:child" },
-				  { "op": "spawn", "program": "test:child", "count": 3, "spread": 0.2, "delay": 4 },
+				  { "op": "launch", "speed": 0.2 },
+				  { "op": "wait", "ticks": 25 },
+				  { "op": "burst" },
+				  { "op": "call", "profile": "test:child" },
+				  { "op": "spawn", "profile": "test:child", "count": 3, "delay": 4 },
 				  { "op": "sound", "id": "minecraft:entity.firework_rocket.launch", "volume": 2.0 },
 				  { "op": "light", "ticks": 20 },
 				  { "op": "end" }
@@ -33,52 +34,113 @@ class ProgramParserTest {
 				""";
 		Program program = ProgramParser.parse(ID, nbt(json));
 
-		assertEquals(7, program.size());
+		assertEquals(8, program.size());
 		assertInstanceOf(Op.Launch.class, program.op(0));
-		assertEquals(0, program.instruction(0).at(), "an op without `at` starts the frame");
-		assertInstanceOf(Op.Burst.class, program.op(1));
-		assertEquals(Instruction.FUSE_AT, program.instruction(1).at());
-		assertEquals(42.0, program.instruction(1).when().heightAbove());
-		assertEquals(100, program.instruction(1).when().timeout());
-		assertInstanceOf(Op.Call.class, program.op(2));
-		assertEquals(Instruction.FUSE_AT, program.instruction(2).at(), "`at` is inherited");
-		assertInstanceOf(Op.Spawn.class, program.op(3));
-		assertInstanceOf(Op.Sound.class, program.op(4));
-		assertInstanceOf(Op.Light.class, program.op(5));
-		assertInstanceOf(Op.End.class, program.op(6));
+		assertEquals(25, ((Op.Wait.Ticks) program.op(1)).ticks(), "an explicit wait keeps its number");
+		assertInstanceOf(Op.Burst.class, program.op(2));
+		assertInstanceOf(Op.Call.class, program.op(3));
+		assertEquals(ID.getNamespace(), program.id().getNamespace());
+		Op.Spawn spawn = (Op.Spawn) program.op(4);
+		assertEquals(3, spawn.targets().size(), "count expands into concrete targets");
+		assertEquals(4, spawn.delayTicks());
+		assertInstanceOf(Op.Sound.class, program.op(5));
+		assertInstanceOf(Op.Light.class, program.op(6));
+		assertInstanceOf(Op.End.class, program.op(7));
 	}
 
 	@Test
-	void backwardsAtIsRejected() {
+	void aWaitWithoutTicksSpendsTheFlightTime() throws Exception {
+		Program program = ProgramParser.parse(ID, nbt("""
+				[{ "op": "wait" }]
+				"""));
+
+		assertInstanceOf(Op.Wait.Flight.class, program.op(0),
+				"no number means the flight time the crafting table edits");
+	}
+
+	@Test
+	void aWaitOfZeroIsRejected() {
 		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
-				[{ "op": "end", "at": 10 }, { "op": "burst", "at": 5 }]
+				[{ "op": "wait", "ticks": 0 }]
 				""")));
 	}
 
 	@Test
-	void invalidAtIsRejected() {
+	void aWaitBeyondTheCapIsRejected() {
 		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
-				[{ "op": "end", "at": "later" }]
+				[{ "op": "wait", "ticks": 401 }]
 				""")));
 	}
 
 	@Test
-	void whenWithoutAConditionIsRejected() {
+	void aRemovedKeyIsAHardError() {
+		// `at` and `when` are gone: silently ignoring them would run a different show than the
+		// author wrote, so the profile is rejected instead.
 		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
-				[{ "op": "burst", "when": { "timeout": 5 } }]
+				[{ "op": "burst", "at": 10 }]
+				""")));
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "burst", "when": { "height": 40 } }]
+				""")));
+	}
+
+	@Test
+	void aMisspelledKeyIsAHardError() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn", "profile": "test:child", "dalay": 2 }]
 				""")));
 	}
 
 	@Test
 	void spawnDefaultsAreSafe() throws Exception {
 		Program program = ProgramParser.parse(ID, nbt("""
-				[{ "op": "spawn", "program": "test:child" }]
+				[{ "op": "spawn", "profile": "test:child" }]
 				"""));
 		Op.Spawn spawn = (Op.Spawn) program.op(0);
 
-		assertEquals(1, spawn.count());
-		assertEquals(0.0F, spawn.spread(), 1.0E-6);
+		assertEquals(1, spawn.targets().size());
 		assertEquals(0, spawn.delayTicks());
+		assertEquals(SpawnTarget.of(CHILD), spawn.targets().get(0));
+	}
+
+	@Test
+	void spawnChildrenNameItemSlots() throws Exception {
+		Program program = ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn", "children": [0, 2, 2], "delay": 3 }]
+				"""));
+		Op.Spawn spawn = (Op.Spawn) program.op(0);
+
+		assertEquals(List.of(SpawnTarget.slot(0), SpawnTarget.slot(2), SpawnTarget.slot(2)), spawn.targets(),
+				"slots keep their order and may repeat");
+		assertEquals(3, spawn.delayTicks());
+	}
+
+	@Test
+	void spawnWithBothFormsIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn", "profile": "test:child", "children": [0] }]
+				""")));
+	}
+
+	@Test
+	void spawnWithoutATargetIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn" }]
+				""")));
+	}
+
+	@Test
+	void countIsRejectedWithChildren() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn", "children": [0], "count": 2 }]
+				""")));
+	}
+
+	@Test
+	void spawnSlotOutOfRangeIsRejected() {
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "spawn", "children": [-1] }]
+				""")));
 	}
 
 	@Test
@@ -89,10 +151,9 @@ class ProgramParserTest {
 	}
 
 	@Test
-	void awaitIsNoLongerAnOp() {
-		// Time is a property of every instruction now; the old blocking op is a hard error.
+	void anUnknownTimeOpIsRejected() {
 		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
-				[{ "op": "await", "ticks": 5 }]
+				[{ "op": "delay", "ticks": 5 }]
 				""")));
 	}
 
@@ -112,19 +173,18 @@ class ProgramParserTest {
 	void emptyProgramIsAllowed() throws Exception {
 		Program program = ProgramParser.parse(ID, nbt("[]"));
 		assertEquals(0, program.size());
-		assertEquals(List.of(), program.instructions());
+		assertEquals(List.of(), program.ops());
 	}
 
 	@Test
 	void jsonNumbersKeepTheirType() throws Exception {
-		// Regression: JsonOps.convertTo(NbtOps) turns [0.0, 0.5, 0.0] into bytes and
-		// truncates every float in a data pack. JsonToNbt must preserve doubles.
+		// Regression: JsonOps.convertTo(NbtOps) turns small numbers into bytes, and 0.25 would
+		// then read as 0. JsonToNbt must preserve doubles.
 		Program program = ProgramParser.parse(ID, nbt("""
-				[{ "op": "launch", "direction": "vector", "vector": [0.0, 0.5, 0.0], "speed": 0.25 }]
+				[{ "op": "launch", "speed": 0.25 }]
 				"""));
 		Op.Launch launch = (Op.Launch) program.op(0);
 
-		assertEquals(new Vec3(0.0, 0.5, 0.0), launch.vector());
 		assertEquals(0.25F, launch.speed(), 1.0E-6);
 	}
 

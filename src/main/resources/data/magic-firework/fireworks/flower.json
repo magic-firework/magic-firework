@@ -3,8 +3,8 @@
   "attributes": {
     "show": "magic-firework:flower",
     "launch.sound": "minecraft:entity.firework_rocket.launch",
-    "fuse.ticks": 26,
-    "afterglow": 10
+    "afterglow": 10,
+    "flight.ticks": 26
   },
   "program": [
     {
@@ -12,8 +12,10 @@
       "speed": 0.22
     },
     {
-      "op": "burst",
-      "at": "fuse"
+      "op": "wait"
+    },
+    {
+      "op": "burst"
     }
   ]
 }

@@ -15,16 +15,16 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Rules, in order:
  * <ol>
- *   <li>execute ops until the top frame is not due yet ({@link Instruction#at()} on the
- *       frame's own clock) or an {@link Instruction#when()} guard still fails;</li>
+ *   <li>execute ops in order until the top frame is waiting on an {@link Op.Wait};</li>
  *   <li>a frame whose program counter leaves the end is popped (implicit {@code end});</li>
  *   <li>at most {@link FireworkLimits#maxOpsPerTick} ops run per tick, so a pathological
  *       program cannot stall the server;</li>
  *   <li>ops only mutate {@link ProgramState} or append an {@link Effect}.</li>
  * </ol>
  *
- * <p>There is no wait op: time is a property of every instruction, and the program never
- * blocks on anything except its own schedule.
+ * <p>Time is spent by {@link Op.Wait} and by nothing else: the interpreter either runs the op
+ * under the pointer or reports that this frame is still waiting, so no op ever blocks on
+ * anything but its own schedule.
  */
 public final class Interpreter {
 	private Interpreter() {
@@ -45,44 +45,33 @@ public final class Interpreter {
 				state.pop();
 				continue;
 			}
-			Instruction instruction = frame.program().instruction(frame.pc());
-			int dueAt = frame.startAge() + instruction.resolveAt(state.bag());
-			if (state.age() < dueAt) {
-				// The frame's next entry is in the future: the whole rocket idles until then,
-				// still flying. That is what "await = v=0 plus time" turned into.
-				break;
-			}
-			if (instruction.guarded() && !instruction.when().satisfied(ctx.position(), ctx.collided())
-					&& !instruction.when().expired(state.age() - dueAt)) {
-				break;
+			Op op = frame.program().op(frame.pc());
+			if (op instanceof Op.Wait wait) {
+				if (!frame.waiting()) {
+					frame.waitUntil(state.age() + waitLength(wait, state.bag()));
+				}
+				if (state.age() < frame.waitUntil()) {
+					// Still waiting: the rocket keeps flying, the program does nothing.
+					break;
+				}
+				frame.clearWait();
 			}
 			frame.advance();
-			apply(instruction.op(), state, ctx, effects);
+			apply(op, state, ctx, effects);
 		}
 		return new Effect.TickResult(List.copyOf(effects), state.done());
+	}
+
+	/** {@code wait} reads the flight time the player set; {@code wait ticks} is literal. */
+	private static int waitLength(Op.Wait wait, AttributeBag bag) {
+		return wait instanceof Op.Wait.Ticks ticks ? ticks.ticks() : Attributes.FLIGHT_TICKS.get(bag);
 	}
 
 	// Java 17 target: an instanceof chain instead of a pattern switch.
 	private static void apply(Op op, ProgramState state, InterpreterContext ctx, List<Effect> out) {
 		AttributeBag bag = state.bag();
 		if (op instanceof Op.Launch launch) {
-			Op.Direction mode = launch.direction();
-			Vec3 vector = launch.vector();
-			// Attribute overrides win over the op: this is how a parent rocket aims
-			// its split children without rewriting their program.
-			if (bag.has(Attributes.DIRECTION_MODE.key())) {
-				mode = Op.Direction.byName(Attributes.DIRECTION_MODE.get(bag));
-				vector = new Vec3(
-						Attributes.DIRECTION_X.get(bag),
-						Attributes.DIRECTION_Y.get(bag),
-						Attributes.DIRECTION_Z.get(bag));
-			}
-			Vec3 direction = switch (mode) {
-				case UP -> new Vec3(0.0, 1.0, 0.0);
-				case LOOK -> ctx.lookDirection();
-				case VECTOR -> vector;
-				case RELATIVE -> relative(bag, ctx.lookDirection());
-			};
+			Vec3 direction = launchDirection(bag, ctx.lookDirection());
 			if (direction.lengthSqr() < 1.0E-6) {
 				direction = new Vec3(0.0, 1.0, 0.0);
 			}
@@ -97,13 +86,13 @@ public final class Interpreter {
 		} else if (op instanceof Op.Burst) {
 			out.add(new Effect.Burst());
 		} else if (op instanceof Op.Call call) {
-			state.push(ctx.programs().find(call.program()));
+			state.push(ctx.programs().find(call.profile()));
 		} else if (op instanceof Op.Spawn spawn) {
-			for (int i = 0; i < spawn.count(); i++) {
+			for (SpawnTarget target : spawn.targets()) {
 				if (!state.tryConsumeChild()) {
 					break;
 				}
-				out.add(new Effect.SpawnChild(spawn.program(), spawn.spread(), spawn.delayTicks()));
+				out.add(new Effect.SpawnChild(target, spawn.delayTicks()));
 			}
 		} else if (op instanceof Op.Sound sound) {
 			ResourceLocation id = sound.id();
@@ -125,6 +114,18 @@ public final class Interpreter {
 		} else if (op instanceof Op.End) {
 			state.pop();
 		}
+	}
+
+	/**
+	 * The bag is the only source of direction: {@code relative} aims from the launcher's heading,
+	 * anything else (including the default {@code up}) goes straight up. The editor writes
+	 * {@code relative} when a dial is turned, so an aimed rocket and a straight one run the same
+	 * program.
+	 */
+	private static Vec3 launchDirection(AttributeBag bag, Vec3 look) {
+		return "relative".equalsIgnoreCase(Attributes.DIRECTION_MODE.get(bag))
+				? relative(bag, look)
+				: new Vec3(0.0, 1.0, 0.0);
 	}
 
 	/**

@@ -21,19 +21,7 @@ class InterpreterTest {
 	private static final ResourceLocation CHILD = new ResourceLocation("test", "child");
 
 	private static Program program(ResourceLocation id, Op... ops) {
-		return new Program(id, java.util.Arrays.stream(ops).map(Instruction::now).toList());
-	}
-
-	private static Program timed(ResourceLocation id, Instruction... instructions) {
-		return new Program(id, List.of(instructions));
-	}
-
-	private static Instruction at(int tick, Op op) {
-		return new Instruction(op, tick, When.NONE);
-	}
-
-	private static Instruction guarded(int tick, When when, Op op) {
-		return new Instruction(op, tick, when);
+		return new Program(id, List.of(ops));
 	}
 
 	private static ProgramLookup lookup(Program... programs) {
@@ -46,28 +34,65 @@ class InterpreterTest {
 
 	private static List<Effect> tick(ProgramState state, ProgramLookup lookup) {
 		state.tickAge();
-		return Interpreter.tick(state, new InterpreterContext(lookup, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), false))
-				.effects();
+		return Interpreter.tick(state, new InterpreterContext(lookup, new Vec3(0.0, 1.0, 0.0))).effects();
 	}
 
 	@Test
-	void burstHappensAtItsScheduledTick() {
-		Program root = timed(ROOT,
-				at(5, new Op.Burst()),
-				at(5, new Op.End()));
+	void waitSpendsExactlyItsTicks() {
+		Program root = program(ROOT, new Op.Burst(), new Op.Wait.Ticks(5), new Op.Burst(), new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 		ProgramLookup lookup = lookup(root);
 
 		List<Integer> burstAges = new ArrayList<>();
-		for (int age = 1; age <= 10; age++) {
+		for (int age = 1; age <= 12; age++) {
 			List<Effect> effects = tick(state, lookup);
 			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
 				burstAges.add(state.age());
 			}
 		}
 
-		assertEquals(List.of(5), burstAges);
+		assertEquals(List.of(1, 6), burstAges, "the first burst is immediate, the second 5 ticks later");
 		assertTrue(state.done());
+	}
+
+	@Test
+	void aFlightTimeWaitReadsTheAttribute() {
+		Program root = program(ROOT, new Op.Wait.Flight(), new Op.Burst(), new Op.End());
+		ProgramLookup lookup = lookup(root);
+
+		assertEquals(List.of(6), burstAges(root, lookup, 5), "age 1 + 5 ticks of flight time");
+		assertEquals(List.of(10), burstAges(root, lookup, 9),
+				"the same program bursts later when the player raises the flight time");
+	}
+
+	/** Runs the program with {@code flight.ticks = flight} and returns the ages it burst at. */
+	private static List<Integer> burstAges(Program root, ProgramLookup lookup, int flight) {
+		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.FLIGHT_TICKS.key(), flight);
+		ProgramState state = ProgramState.start(root, base, 1L, 0);
+		List<Integer> ages = new ArrayList<>();
+		for (int i = 0; i < 20 && !state.done(); i++) {
+			List<Effect> effects = tick(state, lookup);
+			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
+				ages.add(state.age());
+			}
+		}
+		return ages;
+	}
+
+	@Test
+	void aWaitLetsTheRestOfTheProgramRunOnItsTick() {
+		Program root = program(ROOT, new Op.Wait.Ticks(3), new Op.Burst(), new Op.Light(20), new Op.End());
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
+		ProgramLookup lookup = lookup(root);
+
+		List<List<Effect>> perTick = new ArrayList<>();
+		for (int age = 1; age <= 6; age++) {
+			perTick.add(tick(state, lookup));
+		}
+
+		assertTrue(perTick.get(0).isEmpty() && perTick.get(1).isEmpty() && perTick.get(2).isEmpty(),
+				"nothing runs while the wait is spending time");
+		assertEquals(2, perTick.get(3).size(), "burst and light run together once the wait is over");
 	}
 
 	@Test
@@ -95,10 +120,18 @@ class InterpreterTest {
 		assertEquals(0, state.stackSize());
 	}
 
+	private static List<SpawnTarget> copies(ResourceLocation profile, int count) {
+		List<SpawnTarget> targets = new ArrayList<>(count);
+		for (int i = 0; i < count; i++) {
+			targets.add(SpawnTarget.of(profile));
+		}
+		return targets;
+	}
+
 	@Test
 	void spawnRespectsChildLimit() {
 		Program child = program(CHILD, new Op.End());
-		Program root = program(ROOT, new Op.Spawn(CHILD, 8, 0.1F, 0), new Op.End());
+		Program root = program(ROOT, new Op.Spawn(copies(CHILD, 8), 0), new Op.End());
 		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.MAX_CHILDREN.key(), 3);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
 
@@ -109,28 +142,41 @@ class InterpreterTest {
 	}
 
 	@Test
+	void spawnKeepsSlotTargetsInOrder() {
+		Program root = program(ROOT,
+				new Op.Spawn(List.of(SpawnTarget.slot(2), SpawnTarget.slot(0)), 5),
+				new Op.End());
+		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
+
+		List<Effect> effects = tick(state, lookup(root));
+
+		assertEquals(List.of(new Effect.SpawnChild(SpawnTarget.slot(2), 5),
+				new Effect.SpawnChild(SpawnTarget.slot(0), 5)), effects);
+	}
+
+	@Test
 	void launchUsesAttributeDirectionWhenPresent() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
+				new Op.Launch(0.2F),
 				new Op.End());
+		// The op says up; the item says "90° to the right of whoever launched me".
 		AttributeBag base = AttributeBag.EMPTY
-				.withString(Attributes.DIRECTION_MODE.key(), "vector")
-				.withFloat(Attributes.DIRECTION_X.key(), 1.0F)
-				.withFloat(Attributes.DIRECTION_Y.key(), 0.0F)
-				.withFloat(Attributes.DIRECTION_Z.key(), 0.0F);
+				.withString(Attributes.DIRECTION_MODE.key(), "relative")
+				.withFloat(Attributes.DIRECTION_YAW.key(), 90.0F)
+				.withFloat(Attributes.DIRECTION_PITCH.key(), 90.0F);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
 
 		List<Effect> effects = tick(state, lookup(root));
 		Effect.SetVelocity velocity = (Effect.SetVelocity) effects.get(0);
 
-		assertEquals(0.2, velocity.velocity().x, 1.0E-6);
+		assertEquals(-0.2, velocity.velocity().x, 1.0E-6, "the attribute direction wins over the op");
 		assertEquals(0.0, velocity.velocity().y, 1.0E-6);
 	}
 
 	@Test
 	void relativeDirectionIsMeasuredFromTheLaunchersForward() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 1.0F),
+				new Op.Launch(1.0F),
 				new Op.End());
 		ProgramLookup lookup = lookup(root);
 		Vec3 facing = new Vec3(0.0, 0.0, 1.0);
@@ -159,15 +205,14 @@ class InterpreterTest {
 				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
 		state.tickAge();
-		List<Effect> effects = Interpreter.tick(state,
-				new InterpreterContext(lookup, Vec3.ZERO, facing, false)).effects();
+		List<Effect> effects = Interpreter.tick(state, new InterpreterContext(lookup, facing)).effects();
 		return ((Effect.SetVelocity) effects.get(0)).velocity();
 	}
 
 	@Test
 	void launchUsesAttributeSpeedWhenPresent() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
+				new Op.Launch(0.2F),
 				new Op.End());
 		AttributeBag base = AttributeBag.EMPTY.withFloat(Attributes.SPEED.key(), 0.7F);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
@@ -180,7 +225,7 @@ class InterpreterTest {
 	@Test
 	void launchUsesOpSpeedWhenAttributeIsAbsent() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
+				new Op.Launch(0.2F),
 				new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 
@@ -192,8 +237,8 @@ class InterpreterTest {
 	@Test
 	void secondLaunchKeepsItsOwnSpeedWhenNoOverride() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.5F),
+				new Op.Launch(0.2F),
+				new Op.Launch(0.5F),
 				new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 
@@ -206,8 +251,8 @@ class InterpreterTest {
 	@Test
 	void attributeSpeedOverridesEveryLaunch() {
 		Program root = program(ROOT,
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.2F),
-				new Op.Launch(Op.Direction.UP, Vec3.ZERO, 0.5F),
+				new Op.Launch(0.2F),
+				new Op.Launch(0.5F),
 				new Op.End());
 		AttributeBag base = AttributeBag.EMPTY.withFloat(Attributes.SPEED.key(), 0.7F);
 		ProgramState state = ProgramState.start(root, base, 1L, 0);
@@ -248,80 +293,26 @@ class InterpreterTest {
 	}
 
 	@Test
-	void fuseAtIsReadFromTheAttribute() {
-		Program root = timed(ROOT,
-				guarded(Instruction.FUSE_AT, When.NONE, new Op.Burst()),
-				at(10, new Op.Burst()),
-				at(10, new Op.End()));
-		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.FUSE_TICKS.key(), 2);
-		ProgramState state = ProgramState.start(root, base, 1L, 0);
-
-		List<Integer> burstAges = new ArrayList<>();
-		int doneAge = -1;
-		for (int age = 1; age <= 20; age++) {
-			List<Effect> effects = tick(state, lookup(root));
-			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
-				burstAges.add(state.age());
-			}
-			if (state.done()) {
-				doneAge = state.age();
-				break;
-			}
-		}
-
-		// fuse.ticks=2 fires the first burst; the third instruction keeps its absolute tick,
-		// so a fuse never shifts the ops that follow it.
-		assertEquals(List.of(2, 10), burstAges);
-		assertEquals(10, doneAge);
-	}
-
-	@Test
-	void whenHoldsTheOpUntilTheCollisionHappens() {
-		Program root = timed(ROOT,
-				guarded(2, new When(null, null, true, -1), new Op.Burst()),
-				at(2, new Op.End()));
+	void consecutiveWaitsAccumulateIndependently() {
+		Program root = program(ROOT, new Op.Burst(), new Op.Wait.Ticks(8), new Op.Burst(), new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 		ProgramLookup lookup = lookup(root);
 
-		int burstAge = -1;
-		for (int age = 1; age <= 10; age++) {
-			state.tickAge();
-			boolean collided = age >= 6;
-			List<Effect> effects = Interpreter.tick(state,
-					new InterpreterContext(lookup, Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), collided)).effects();
+		List<Integer> burstAges = new ArrayList<>();
+		for (int age = 1; age <= 20; age++) {
+			List<Effect> effects = tick(state, lookup);
 			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
-				burstAge = state.age();
+				burstAges.add(state.age());
 			}
 		}
 
-		assertEquals(6, burstAge, "the guard waits past `at` until physics agrees");
-		assertTrue(state.done());
+		assertEquals(List.of(1, 9), burstAges, "a wait never shifts the ops before it");
 	}
 
 	@Test
-	void whenTimeoutRunsTheOpAnyway() {
-		Program root = timed(ROOT,
-				guarded(2, new When(null, null, true, 3), new Op.Burst()),
-				at(2, new Op.End()));
-		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
-
-		int burstAge = -1;
-		for (int age = 1; age <= 10 && burstAge < 0; age++) {
-			List<Effect> effects = tick(state, lookup(root));
-			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
-				burstAge = state.age();
-			}
-		}
-
-		assertEquals(5, burstAge, "2 + timeout 3, because the rocket never collides");
-	}
-
-	@Test
-	void callStartsTheNestedTimelineAtItsOwnTick() {
-		Program child = timed(CHILD, at(4, new Op.Burst()), at(4, new Op.End()));
-		Program root = timed(ROOT,
-				at(6, new Op.Call(CHILD)),
-				at(6, new Op.End()));
+	void callAndWaitAnchorToTheCalleesFrame() {
+		Program child = program(CHILD, new Op.Wait.Ticks(4), new Op.Burst(), new Op.End());
+		Program root = program(ROOT, new Op.Wait.Ticks(5), new Op.Call(CHILD), new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 1L, 0);
 		ProgramLookup lookup = lookup(root, child);
 
@@ -333,14 +324,13 @@ class InterpreterTest {
 			}
 		}
 
-		assertEquals(List.of(10), burstAges, "6 + 4: the callee's clock starts when it is pushed");
+		assertEquals(List.of(10), burstAges, "5 + 4: a wait inside a call starts when the frame is pushed");
 	}
 
 	@Test
 	void programWithoutFramesIsDone() {
 		ProgramState state = ProgramState.empty();
-		Effect.TickResult result = Interpreter.tick(state,
-				new InterpreterContext(lookup(), Vec3.ZERO, new Vec3(0.0, 1.0, 0.0), false));
+		Effect.TickResult result = Interpreter.tick(state, new InterpreterContext(lookup(), new Vec3(0.0, 1.0, 0.0)));
 
 		assertTrue(result.finished());
 		assertTrue(result.effects().isEmpty());
@@ -348,20 +338,29 @@ class InterpreterTest {
 	}
 
 	@Test
-	void savesAndResumesMidProgram() {
-		Program root = timed(ROOT, at(20, new Op.Burst()), at(20, new Op.End()));
+	void savesAndResumesMidWait() {
+		Program root = program(ROOT, new Op.Wait.Ticks(6), new Op.Burst(), new Op.End());
 		ProgramState state = ProgramState.start(root, AttributeBag.EMPTY, 7L, 2);
 		ProgramLookup lookup = lookup(root);
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 3; i++) {
 			tick(state, lookup);
 		}
 
 		ProgramState resumed = ProgramState.load(state.save(), lookup, AttributeBag.EMPTY);
 
-		assertEquals(5, resumed.age());
+		assertEquals(3, resumed.age());
 		assertEquals(7L, resumed.seed());
 		assertEquals(2, resumed.depth());
 		assertEquals(1, resumed.stackSize());
+
+		List<Integer> burstAges = new ArrayList<>();
+		for (int i = 0; i < 6; i++) {
+			List<Effect> effects = tick(resumed, lookup);
+			if (effects.stream().anyMatch(effect -> effect instanceof Effect.Burst)) {
+				burstAges.add(resumed.age());
+			}
+		}
+		assertEquals(List.of(7), burstAges, "the wait resumes at its absolute age, losing no tick");
 	}
 
 	/**
@@ -372,7 +371,7 @@ class InterpreterTest {
 	 */
 	@Test
 	void spawnedChildKeepsItsOwnDirectionAttributes() {
-		Program child = program(CHILD, new Op.Launch(Op.Direction.VECTOR, new Vec3(0.0, 1.0, 0.0), 0.2F),
+		Program child = program(CHILD, new Op.Launch(0.2F),
 				new Op.End());
 		AttributeBag childDefaults = AttributeBag.EMPTY
 				.withString(Attributes.DIRECTION_MODE.key(), "up");
@@ -382,7 +381,7 @@ class InterpreterTest {
 		state.tickAge();
 		// The parent is moving sideways; the child must ignore that and go straight up.
 		List<Effect> effects = Interpreter.tick(state,
-				new InterpreterContext(lookup, Vec3.ZERO, new Vec3(1.0, 0.0, 0.0), false)).effects();
+				new InterpreterContext(lookup, new Vec3(1.0, 0.0, 0.0))).effects();
 
 		Effect.SetVelocity velocity = (Effect.SetVelocity) effects.get(0);
 		assertEquals(0.0, velocity.velocity().x, 1.0E-6);

@@ -37,9 +37,9 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	/** One gunpowder raises {@link Attributes#SPEED} by this much. */
 	public static final Item SPEED_MATERIAL = Items.GUNPOWDER;
 	public static final float SPEED_PER_ITEM = 0.1F;
-	/** One string raises {@link Attributes#FUSE_TICKS} (flight time) by this many ticks. */
-	public static final Item FUSE_MATERIAL = Items.STRING;
-	public static final int FUSE_PER_ITEM = 20;
+	/** One string raises {@link Attributes#FLIGHT_TICKS} by this many ticks. */
+	public static final Item FLIGHT_MATERIAL = Items.STRING;
+	public static final int TICKS_PER_STRING = 20;
 	/** Degrees per press on the direction page. */
 	public static final int DIRECTION_STEP_DEGREES = 15;
 
@@ -83,9 +83,9 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		return resolved == null ? 0.0F : Attributes.SPEED.get(effective(resolved));
 	}
 
-	public int effectiveFuse(Definitions definitions) {
+	public int effectiveFlight(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
-		return resolved == null ? 0 : Attributes.FUSE_TICKS.get(effective(resolved));
+		return resolved == null ? 0 : Attributes.FLIGHT_TICKS.get(effective(resolved));
 	}
 
 	// ── direction angles ─────────────────────────────────────────────────────
@@ -95,10 +95,7 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		if (resolved == null) {
 			return 0.0F;
 		}
-		AttributeBag bag = effective(resolved);
-		return bag.has(Attributes.DIRECTION_YAW.key())
-				? Attributes.DIRECTION_YAW.get(bag)
-				: deriveYaw(bag);
+		return Attributes.DIRECTION_YAW.get(effective(resolved));
 	}
 
 	public float effectivePitch(Definitions definitions) {
@@ -106,10 +103,7 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		if (resolved == null) {
 			return 0.0F;
 		}
-		AttributeBag bag = effective(resolved);
-		return bag.has(Attributes.DIRECTION_PITCH.key())
-				? Attributes.DIRECTION_PITCH.get(bag)
-				: derivePitch(bag);
+		return Attributes.DIRECTION_PITCH.get(effective(resolved));
 	}
 
 	/**
@@ -142,32 +136,15 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 			pitch = clampDegrees(pitch + step);
 		}
 
-		// The launch resolves the vector from the player's heading, so no world vector here —
-		// drop any stale one to keep the item's data honest.
+		// The launch resolves the vector from the launcher's heading at launch time.
 		AttributeBag overlay = resolved.overlay()
 				.withString(Attributes.DIRECTION_MODE.key(), "relative")
 				.withFloat(Attributes.DIRECTION_YAW.key(), yaw)
-				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch)
-				.without(Attributes.DIRECTION_X.key())
-				.without(Attributes.DIRECTION_Y.key())
-				.without(Attributes.DIRECTION_Z.key());
+				.withFloat(Attributes.DIRECTION_PITCH.key(), pitch);
 
 		ItemStack firework = getItem(SLOT_FIREWORK);
 		FireworkDataHelper.setOverlay(firework, overlay);
 		setItem(SLOT_FIREWORK, firework);
-	}
-
-	private static float deriveYaw(AttributeBag bag) {
-		float x = Attributes.DIRECTION_X.get(bag);
-		float z = Attributes.DIRECTION_Z.get(bag);
-		float degrees = (float) Math.toDegrees(Math.atan2(z, x));
-		return (degrees + 360.0F) % 360.0F;
-	}
-
-	private static float derivePitch(AttributeBag bag) {
-		// Polar angle from +Y: 0° is straight up.
-		float y = Math.max(-1.0F, Math.min(1.0F, Attributes.DIRECTION_Y.get(bag)));
-		return (float) Math.toDegrees(Math.acos(y));
 	}
 
 	private static float clampDegrees(float value) {
@@ -175,13 +152,14 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	}
 
 	/**
-	 * Moves one step along the speed or flight-time scale. Both may reach zero but never go
+	 * Moves one step along the speed or the flight-time scale. Both may reach zero but never go
 	 * negative.
 	 *
 	 * <p>Materials buy the steps *above* the profile's own value; below that they are free, so
 	 * lowering can never mint materials that were never paid for.
 	 *
-	 * @param which {@link FireworkEditorMenu#ADJUST_SPEED} or {@link FireworkEditorMenu#ADJUST_FUSE}
+	 * @param which {@link FireworkEditorMenu#ADJUST_SPEED} or
+	 *              {@link FireworkEditorMenu#ADJUST_FLIGHT_TIME}
 	 * @param delta {@code +1} to raise (consumes a material) or {@code -1} to lower (refunds one)
 	 */
 	public void adjustFlight(Definitions definitions, Player player, int which, int delta) {
@@ -211,21 +189,21 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 			FireworkDataHelper.setOverlay(firework,
 					resolved.overlay().withFloat(Attributes.SPEED.key(), Attributes.SPEED.clamp(value)));
 			setItem(SLOT_FIREWORK, firework);
-		} else if (which == FireworkEditorMenu.ADJUST_FUSE) {
-			double raw = Attributes.FUSE_TICKS.get(effective) / (double) FUSE_PER_ITEM;
-			int maxSteps = Math.max(0, Attributes.FUSE_TICKS.max() / FUSE_PER_ITEM);
-			int freeSteps = Math.max(0, (int) Math.round(profileBaseFuse(resolved) / (double) FUSE_PER_ITEM));
+		} else if (which == FireworkEditorMenu.ADJUST_FLIGHT_TIME) {
+			double raw = Attributes.FLIGHT_TICKS.get(effective) / (double) TICKS_PER_STRING;
+			int maxSteps = Math.max(0, Attributes.FLIGHT_TICKS.max() / TICKS_PER_STRING);
+			int freeSteps = Math.max(0, (int) Math.round(profileBaseFlight(resolved) / (double) TICKS_PER_STRING));
 			int nearest = nearestStep(raw);
 			int next = stepped(raw, delta, maxSteps);
 			if (onGrid(raw) && next == nearest) {
 				return;
 			}
-			if (!pay(player, FUSE_MATERIAL, paid(freeSteps, next) - paid(freeSteps, nearest))) {
+			if (!pay(player, FLIGHT_MATERIAL, paid(freeSteps, next) - paid(freeSteps, nearest))) {
 				return;
 			}
-			int value = next * FUSE_PER_ITEM;
+			int value = next * TICKS_PER_STRING;
 			FireworkDataHelper.setOverlay(firework,
-					resolved.overlay().withInt(Attributes.FUSE_TICKS.key(), Attributes.FUSE_TICKS.clamp(value)));
+					resolved.overlay().withInt(Attributes.FLIGHT_TICKS.key(), Attributes.FLIGHT_TICKS.clamp(value)));
 			setItem(SLOT_FIREWORK, firework);
 		}
 	}
@@ -309,10 +287,10 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 				: Attributes.SPEED.get(resolved.profile().defaults());
 	}
 
-	private static int profileBaseFuse(FireworkDataHelper.Resolved resolved) {
+	private static int profileBaseFlight(FireworkDataHelper.Resolved resolved) {
 		return resolved.profile() == null
-				? Attributes.FUSE_TICKS.def()
-				: Attributes.FUSE_TICKS.get(resolved.profile().defaults());
+				? Attributes.FLIGHT_TICKS.def()
+				: Attributes.FLIGHT_TICKS.get(resolved.profile().defaults());
 	}
 
 	/** Creative players do not spend materials. */

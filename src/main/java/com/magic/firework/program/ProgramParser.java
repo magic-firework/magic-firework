@@ -2,40 +2,55 @@ package com.magic.firework.program;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import com.magic.firework.attribute.Attributes;
+import com.magic.firework.config.FireworkLimits;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NumericTag;
-import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.Vec3;
 
 /**
- * Reads the instruction list of a profile.
+ * Reads the op list of a profile.
  *
  * <pre>
  * data/&lt;ns&gt;/fireworks/ring.json
  * {
- *   "attributes": { "show": "magic-firework:ring", "fuse.ticks": 35 },
+ *   "attributes": { "show": "magic-firework:ring" },
  *   "program": [
- *     { "op": "launch" },
- *     { "op": "burst", "at": "fuse" },
+ *     { "op": "launch", "speed": 0.12 },
+ *     { "op": "wait", "ticks": 35 },
+ *     { "op": "burst" },
  *     { "op": "end" }
  *   ]
  * }
  * </pre>
  *
- * Every op may carry {@code at} (ticks after the frame starts, or the literal {@code "fuse"}
- * for {@code fuse.ticks}) and {@code when} (a physics guard). Omitting {@code at} runs the op
- * on the same tick as the previous one, so a plain sequence is still read top to bottom.
+ * <p>Ops run in list order, starting on the tick the frame is pushed. The only way a program
+ * spends time is {@link Op.Wait}: {@code launch}, {@code wait}, {@code burst} is a rocket that
+ * rises for that many ticks and then bursts.
  *
- * <p>An unknown op is a hard error for that profile: silently skipping it would run a
- * different show than the author wrote. The store logs and keeps the previous version.
+ * <p>Every key an op carries is checked against the keys that op accepts, so a typo or a field
+ * from an older format is a hard error for that profile instead of being silently ignored. The
+ * store logs it and keeps the previous version of the profile.
  */
 public final class ProgramParser {
+	/** The keys each op accepts; {@code op} is always one of them. Kept in step with the schema. */
+	private static final Map<String, Set<String>> KEYS = Map.of(
+			"launch", Set.of("op", "speed"),
+			"burst", Set.of("op"),
+			"call", Set.of("op", "profile"),
+			"spawn", Set.of("op", "profile", "children", "count", "delay"),
+			"sound", Set.of("op", "id", "volume", "pitch"),
+			"light", Set.of("op", "ticks"),
+			"wait", Set.of("op", "ticks"),
+			"end", Set.of("op"));
+
 	private ProgramParser() {
 	}
 
@@ -43,22 +58,14 @@ public final class ProgramParser {
 		if (!(tag instanceof ListTag list)) {
 			throw new ProgramException("program must be a list of ops");
 		}
-		List<Instruction> instructions = new ArrayList<>(list.size());
-		int previousAt = 0;
+		List<Op> ops = new ArrayList<>(list.size());
 		for (int i = 0; i < list.size(); i++) {
-			Tag element = list.get(i);
-			if (!(element instanceof CompoundTag compound)) {
+			if (!(list.get(i) instanceof CompoundTag compound)) {
 				throw new ProgramException("op #" + i + " is not an object");
 			}
-			int at = at(compound, i, previousAt);
-			if (at >= 0 && previousAt >= 0 && at < previousAt) {
-				throw new ProgramException("op #" + i + " has \"at\": " + at
-						+ ", which is before the previous op's " + previousAt);
-			}
-			instructions.add(new Instruction(parseOp(i, compound), at, when(compound, i)));
-			previousAt = at;
+			ops.add(parseOp(i, compound));
 		}
-		return new Program(id, instructions);
+		return new Program(id, ops);
 	}
 
 	private static Op parseOp(int index, CompoundTag tag) throws ProgramException {
@@ -66,18 +73,13 @@ public final class ProgramParser {
 		if (name.isEmpty()) {
 			throw new ProgramException("op #" + index + " has no \"op\" key");
 		}
-		return switch (name.toLowerCase(java.util.Locale.ROOT)) {
-			case "launch" -> new Op.Launch(
-					Op.Direction.byName(tag.getString("direction")),
-					vector(tag, index),
-					number(tag, "speed", Attributes.SPEED.def(), index));
+		String op = name.toLowerCase(Locale.ROOT);
+		checkKeys(index, op, tag);
+		return switch (op) {
+			case "launch" -> new Op.Launch(number(tag, "speed", Attributes.SPEED.def(), index));
 			case "burst" -> new Op.Burst();
-			case "call" -> new Op.Call(program(tag, index));
-			case "spawn" -> new Op.Spawn(
-					program(tag, index),
-					Math.max(1, tag.getInt("count")),
-					number(tag, "spread", 0.0F, index),
-					Math.max(0, tag.getInt("delay")));
+			case "call" -> new Op.Call(profile(tag, index));
+			case "spawn" -> spawn(tag, index);
 			case "sound" -> new Op.Sound(
 					id(tag.getString("id"), index, "id"),
 					number(tag, "volume", Attributes.SOUND_VOLUME.def(), index),
@@ -85,58 +87,112 @@ public final class ProgramParser {
 			case "light" -> new Op.Light(tag.contains("ticks")
 					? Math.max(0, tag.getInt("ticks"))
 					: Attributes.LIGHT_TICKS.def());
+			case "wait" -> wait(tag, index);
 			case "end" -> new Op.End();
 			default -> throw new ProgramException("op #" + index + " has unknown type \"" + name + "\"");
 		};
 	}
 
-	/**
-	 * @param previousAt the offset of the previous instruction, inherited when {@code at} is
-	 *                   omitted so a list reads as a sequence of same-tick ops unless stated
-	 */
-	private static int at(CompoundTag tag, int index, int previousAt) throws ProgramException {
-		Tag raw = tag.get("at");
-		if (raw == null) {
-			return previousAt;
+	/** Rejects keys the op does not take, so a stale or misspelled field cannot be ignored. */
+	private static void checkKeys(int index, String op, CompoundTag tag) throws ProgramException {
+		Set<String> allowed = KEYS.get(op);
+		if (allowed == null) {
+			return; // unknown op: reported by the switch, with a better message
 		}
-		if (raw instanceof StringTag literal) {
-			if ("fuse".equalsIgnoreCase(literal.getAsString())) {
-				return Instruction.FUSE_AT;
+		for (String key : tag.getAllKeys()) {
+			if (!allowed.contains(key)) {
+				throw new ProgramException("op #" + index + " (" + op + ") does not take \"" + key
+						+ "\"; it takes " + String.join(", ", allowed.stream().sorted().toList()));
 			}
-			throw new ProgramException("op #" + index + " has an invalid \"at\": \""
-					+ literal.getAsString() + "\" (expected a tick or \"fuse\")");
 		}
-		if (!(raw instanceof NumericTag)) {
-			throw new ProgramException("op #" + index + " \"at\" must be a tick or \"fuse\"");
-		}
-		int value = tag.getInt("at");
-		if (value < 0) {
-			throw new ProgramException("op #" + index + " has a negative \"at\": " + value);
-		}
-		return value;
 	}
 
-	private static When when(CompoundTag tag, int index) throws ProgramException {
-		Tag raw = tag.get("when");
-		if (raw == null) {
-			return When.NONE;
+	/**
+	 * {@code { "op": "wait" }} spends the rocket's flight time, which is the number the crafting
+	 * table edits; {@code { "op": "wait", "ticks": n }} spends a literal count instead.
+	 *
+	 * <p>An explicit length must be positive: {@code "ticks": 0} would be a wait that waits,
+	 * which is an authoring mistake, not a value.
+	 */
+	private static Op.Wait wait(CompoundTag tag, int index) throws ProgramException {
+		if (!tag.contains("ticks")) {
+			return new Op.Wait.Flight();
 		}
-		if (!(raw instanceof CompoundTag guard)) {
-			throw new ProgramException("op #" + index + " \"when\" must be an object");
+		int ticks = tag.getInt("ticks");
+		if (ticks < 1) {
+			throw new ProgramException("op #" + index + " waits for " + ticks + " ticks; a wait is at least 1");
 		}
-		Double heightAbove = guard.contains("height") ? guard.getDouble("height") : null;
-		Double heightBelow = guard.contains("below") ? guard.getDouble("below") : null;
-		boolean collision = guard.getBoolean("collision");
-		int timeout = guard.contains("timeout") ? Math.max(0, guard.getInt("timeout")) : -1;
-		When when = new When(heightAbove, heightBelow, collision, timeout);
-		if (when.isEmpty()) {
-			throw new ProgramException("op #" + index + " \"when\" needs \"height\", \"below\" or \"collision\"");
+		if (ticks > FireworkLimits.maxWaitTicks) {
+			throw new ProgramException("op #" + index + " waits for " + ticks + " ticks; at most "
+					+ FireworkLimits.maxWaitTicks + " are allowed");
 		}
-		return when;
+		return new Op.Wait.Ticks(ticks);
 	}
 
-	private static ResourceLocation program(CompoundTag tag, int index) throws ProgramException {
-		return id(tag.getString("program"), index, "program");
+	/**
+	 * A spawn op names what it creates in exactly one of two ways, and the parser is the place
+	 * that decides which: {@code children} lists item slots, {@code profile} names content.
+	 *
+	 * <p>{@code count} expands here rather than in the interpreter, so the op the runtime sees is
+	 * already a flat list of concrete requests and the two forms cannot drift apart later.
+	 */
+	private static Op.Spawn spawn(CompoundTag tag, int index) throws ProgramException {
+		int delay = Math.max(0, tag.getInt("delay"));
+		boolean slots = tag.contains("children");
+		boolean named = tag.contains("profile");
+		if (slots && named) {
+			throw new ProgramException("op #" + index
+					+ " has both \"profile\" and \"children\": a spawn names content or item slots, not both");
+		}
+		if (slots) {
+			return new Op.Spawn(childSlots(tag, index), delay);
+		}
+		if (named) {
+			ResourceLocation profile = profile(tag, index);
+			int count = Math.max(1, Math.min(tag.getInt("count"), FireworkLimits.maxChildrenCeiling));
+			List<SpawnTarget> targets = new ArrayList<>(count);
+			for (int i = 0; i < count; i++) {
+				targets.add(SpawnTarget.of(profile));
+			}
+			return new Op.Spawn(targets, delay);
+		}
+		throw new ProgramException("op #" + index
+				+ " is a spawn with neither \"profile\" (content) nor \"children\" (item slots)");
+	}
+
+	private static List<SpawnTarget> childSlots(CompoundTag tag, int index) throws ProgramException {
+		if (tag.contains("count")) {
+			throw new ProgramException("op #" + index
+					+ " combines \"count\" with \"children\"; repeat the slot in the list instead");
+		}
+		Tag raw = tag.get("children");
+		if (!(raw instanceof ListTag list)) {
+			throw new ProgramException("op #" + index + " \"children\" must be a list of slot indices");
+		}
+		if (list.isEmpty()) {
+			throw new ProgramException("op #" + index + " has an empty \"children\" list");
+		}
+		if (list.size() > FireworkLimits.maxNestingNodes) {
+			throw new ProgramException("op #" + index + " names " + list.size() + " children, at most "
+					+ FireworkLimits.maxNestingNodes + " are allowed");
+		}
+		List<SpawnTarget> targets = new ArrayList<>(list.size());
+		for (int i = 0; i < list.size(); i++) {
+			if (!(list.get(i) instanceof NumericTag)) {
+				throw new ProgramException("op #" + index + " children[" + i + "] is not an integer slot");
+			}
+			int slot = list.getInt(i);
+			if (slot < 0 || slot >= FireworkLimits.maxNestingNodes) {
+				throw new ProgramException("op #" + index + " children[" + i + "] = " + slot
+						+ ", slots run 0.." + (FireworkLimits.maxNestingNodes - 1));
+			}
+			targets.add(SpawnTarget.slot(slot));
+		}
+		return targets;
+	}
+
+	private static ResourceLocation profile(CompoundTag tag, int index) throws ProgramException {
+		return id(tag.getString("profile"), index, "profile");
 	}
 
 	private static ResourceLocation id(String value, int index, String key) throws ProgramException {
@@ -151,32 +207,24 @@ public final class ProgramParser {
 		if (!tag.contains(key)) {
 			return def;
 		}
-		double value = tag.getDouble(key);
+		return number(tag.get(key), key, index);
+	}
+
+	private static float number(Tag tag, String key, int index) throws ProgramException {
+		if (!(tag instanceof NumericTag numeric)) {
+			throw new ProgramException("op #" + index + " \"" + key + "\" must be a number");
+		}
+		double value = numeric.getAsDouble();
 		if (Double.isNaN(value) || Double.isInfinite(value)) {
 			throw new ProgramException("op #" + index + " has a non-finite \"" + key + "\"");
 		}
 		return (float) value;
 	}
 
-	private static Vec3 vector(CompoundTag tag, int index) throws ProgramException {
-		Tag raw = tag.get("vector");
-		if (raw == null) {
-			return new Vec3(0.0, 1.0, 0.0);
-		}
-		// Read element-wise instead of getList(key, TAG_DOUBLE): JSON number decoding
-		// may produce int tags, and a type mismatch would silently yield an empty list.
-		if (!(raw instanceof ListTag list) || list.size() != 3) {
-			throw new ProgramException("op #" + index + " \"vector\" must be [x, y, z]");
-		}
-		for (int i = 0; i < 3; i++) {
-			if (!(list.get(i) instanceof NumericTag)) {
-				throw new ProgramException("op #" + index + " \"vector\" must contain numbers");
-			}
-		}
-		return new Vec3(list.getDouble(0), list.getDouble(1), list.getDouble(2));
-	}
+	/** One rejected program: the caller logs it and keeps the previously loaded version. */
+	public static class ProgramException extends Exception {
+		private static final long serialVersionUID = 1L;
 
-	public static final class ProgramException extends Exception {
 		public ProgramException(String message) {
 			super(message);
 		}

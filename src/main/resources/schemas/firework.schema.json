@@ -31,6 +31,13 @@
           "maximum": 4,
           "description": "Blocks per tick. Overrides the launch op's speed when present."
         },
+        "flight.ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 400,
+          "default": 40,
+          "description": "Flight time in ticks, edited with string in the crafting table. A `wait` with no `ticks` spends exactly this, so it is how long the rocket rises before the next op."
+        },
         "flight.gravity": {
           "type": "number",
           "minimum": -1,
@@ -50,31 +57,9 @@
           "description": "Velocity multiplier per tick; 1.0 means no drag."
         },
         "flight.direction.mode": {
-          "enum": ["up", "look", "vector"],
-          "default": "up"
-        },
-        "flight.direction.x": {
-          "type": "number",
-          "minimum": -1,
-          "maximum": 1,
-          "description": "vector mode only."
-        },
-        "flight.direction.y": {
-          "type": "number",
-          "minimum": -1,
-          "maximum": 1,
-          "description": "vector mode only."
-        },
-        "flight.direction.z": {
-          "type": "number",
-          "minimum": -1,
-          "maximum": 1,
-          "description": "vector mode only."
-        },
-        "collide": {
-          "type": "boolean",
-          "default": true,
-          "description": "Explode on the first block or entity collision."
+          "enum": ["up", "relative"],
+          "default": "up",
+          "description": "The only source of launch direction. up goes straight up; relative reads flight.direction.yaw/pitch from the launcher's heading."
         },
         "decorative": {
           "type": "boolean",
@@ -130,13 +115,6 @@
           "$ref": "./common.schema.json#/$defs/id",
           "description": "Sound played once when the rocket is created."
         },
-        "fuse.ticks": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 400,
-          "default": 40,
-          "description": "Tick offset used by every instruction with `at: \"fuse\"`; the crafting table raises it to stretch flight time."
-        },
         "sound.id": {
           "$ref": "./common.schema.json#/$defs/id",
           "description": "Overrides the id of every sound op."
@@ -180,53 +158,7 @@
       "description": "One timed instruction. `at` places it on the frame's tick timeline, `when` gates it on physics, nesting is call/end, children are spawn.",
       "properties": {
         "op": {
-          "enum": ["launch", "burst", "call", "spawn", "sound", "light", "end"]
-        },
-        "at": {
-          "oneOf": [
-            {
-              "type": "integer",
-              "minimum": 0
-            },
-            {
-              "const": "fuse"
-            }
-          ],
-          "description": "Ticks after the frame starts. \"fuse\" reads the fuse.ticks attribute. Omitted means the same tick as the previous instruction."
-        },
-        "when": {
-          "type": "object",
-          "additionalProperties": false,
-          "minProperties": 1,
-          "description": "Optional physics guard: the op runs at `at` only once this holds. Nesting a call does not reset it.",
-          "properties": {
-            "height": {
-              "type": "number",
-              "description": "Wait until position.y is above this."
-            },
-            "below": {
-              "type": "number",
-              "description": "Wait until position.y is below this."
-            },
-            "collision": {
-              "type": "boolean",
-              "description": "Wait until the rocket has collided."
-            },
-            "timeout": {
-              "type": "integer",
-              "minimum": 0,
-              "description": "Give up waiting this many ticks after `at` and run the op anyway."
-            }
-          }
-        },
-        "direction": {
-          "enum": ["up", "look", "vector", "relative"],
-          "default": "up",
-          "description": "launch only. An attribute override wins when flight.direction.mode is set. relative reads flight.direction.yaw/pitch from the launcher's heading."
-        },
-        "vector": {
-          "$ref": "./common.schema.json#/$defs/vec3",
-          "description": "launch only: the direction when direction is vector."
+          "enum": ["launch", "burst", "call", "spawn", "sound", "light", "wait", "end"]
         },
         "speed": {
           "type": "number",
@@ -236,25 +168,28 @@
         },
         "ticks": {
           "type": "integer",
-          "minimum": 0,
-          "description": "light only: light duration (0..400)."
+          "description": "light only: light duration (0..400). wait only: a literal number of ticks (1..400); omit it to spend the rocket's flight time instead."
         },
-        "program": {
+        "profile": {
           "$ref": "./common.schema.json#/$defs/id",
-          "description": "call/spawn only: the program to run or split into."
+          "description": "call/spawn only: the firework profile whose program runs (call) or whose attributes and program the child rocket gets (spawn). A spawn op names either this or `children`, never both."
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 63
+          },
+          "description": "spawn only: child slots of the launching item's nested tree, one rocket per entry. Slot n is the n-th entry of the item's child list, and the tooltip lists the same numbering. A slot the item does not fill spawns nothing. Cannot be combined with `profile` or `count`."
         },
         "count": {
           "type": "integer",
           "minimum": 1,
           "maximum": 256,
-          "description": "spawn only: number of children."
-        },
-        "spread": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "deprecated": true,
-          "description": "spawn only. Ignored: a child now flies along its own launch op and flight.direction.* attributes. Still accepted so existing data packs load."
+          "description": "spawn only: how many copies of `profile` to create. Not allowed with `children`; repeat the slot in that list instead."
         },
         "delay": {
           "type": "integer",
@@ -281,18 +216,15 @@
       "allOf": [
         {
           "if": {
-            "required": ["op", "direction"],
+            "required": ["op"],
             "properties": {
               "op": {
-                "const": "launch"
-              },
-              "direction": {
-                "const": "vector"
+                "const": "call"
               }
             }
           },
           "then": {
-            "required": ["vector"]
+            "required": ["profile"]
           }
         },
         {
@@ -300,12 +232,22 @@
             "required": ["op"],
             "properties": {
               "op": {
-                "enum": ["call", "spawn"]
+                "const": "spawn"
               }
             }
           },
           "then": {
-            "required": ["program"]
+            "oneOf": [
+              {
+                "required": ["profile"]
+              },
+              {
+                "required": ["children"],
+                "not": {
+                  "required": ["count"]
+                }
+              }
+            ]
           }
         },
         {
@@ -319,6 +261,44 @@
           },
           "then": {
             "required": ["id"]
+          }
+        },
+        {
+          "if": {
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "const": "wait"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ticks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 400
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["op"],
+            "properties": {
+              "op": {
+                "const": "light"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ticks": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 400
+              }
+            }
           }
         }
       ]

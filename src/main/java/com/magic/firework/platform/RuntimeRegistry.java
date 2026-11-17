@@ -32,14 +32,6 @@ public final class RuntimeRegistry {
 		return current;
 	}
 
-	public static FireworkRuntime require() {
-		FireworkRuntime runtime = current;
-		if (runtime == null) {
-			throw new IllegalStateException("no firework runtime: the server is not running");
-		}
-		return runtime;
-	}
-
 	public static void start(MinecraftServer server) {
 		current = new FireworkRuntime(server, pendingDefinitions, pendingContent);
 		MagicFirework.LOGGER.info("firework runtime started");

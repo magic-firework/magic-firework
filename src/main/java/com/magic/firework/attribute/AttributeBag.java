@@ -22,6 +22,9 @@ import net.minecraft.nbt.Tag;
  *
  * <p>Layering is a flat merge, upper layer wins. Immutability is by convention:
  * {@link #raw()} exposes the tag for reading, never mutate it.
+ *
+ * <p>Two bags are equal when they hold the same keys and the same tags, so a bag can be
+ * compared (or used as a map key) like the value object it is.
  */
 public final class AttributeBag {
 	public static final AttributeBag EMPTY = new AttributeBag(new CompoundTag());
@@ -141,6 +144,16 @@ public final class AttributeBag {
 			next.put(key, upper.tag.get(key).copy());
 		}
 		return new AttributeBag(next);
+	}
+
+	@Override
+	public boolean equals(Object other) {
+		return this == other || (other instanceof AttributeBag bag && tag.equals(bag.tag));
+	}
+
+	@Override
+	public int hashCode() {
+		return tag.hashCode();
 	}
 
 	@Override

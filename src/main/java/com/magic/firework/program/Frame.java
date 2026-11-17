@@ -4,30 +4,30 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One entry of the call stack: a program, the tick its clock started and its instruction
- * pointer.
+ * One entry of the call stack: a program, its instruction pointer and its pending wait.
  *
- * <p>{@code startAge} is absolute so that save/load keeps a nested frame's schedule intact:
- * every {@link Instruction#at()} is measured from it, which is what makes a {@code call}
- * shift a whole program in time without rewriting any op.
+ * <p>{@code waitUntil} is an absolute age, not a countdown, so saving mid-wait and loading it
+ * back resumes on exactly the tick the author scheduled: a {@code wait 25} pushed at age 7 is
+ * satisfied at age 32 before and after a reload, and no tick is lost or repeated.
  */
 public final class Frame {
+	/** No wait in progress. An absolute age is never negative, so the sentinel is unambiguous. */
+	public static final int NO_WAIT = -1;
+
 	private final ResourceLocation programId;
 	private final Program program;
-	private final int startAge;
 	private int pc;
+	private int waitUntil = NO_WAIT;
 
-	public Frame(Program program, int startAge) {
-		this.programId = program.id();
-		this.program = program;
-		this.startAge = Math.max(0, startAge);
+	public Frame(Program program) {
+		this(program.id(), program, 0, NO_WAIT);
 	}
 
-	private Frame(ResourceLocation programId, Program program, int startAge, int pc) {
+	private Frame(ResourceLocation programId, Program program, int pc, int waitUntil) {
 		this.programId = programId;
 		this.program = program;
-		this.startAge = Math.max(0, startAge);
-		this.pc = pc;
+		this.pc = Math.max(0, pc);
+		this.waitUntil = Math.max(NO_WAIT, waitUntil);
 	}
 
 	public static Frame load(ProgramLookup lookup, CompoundTag tag) {
@@ -39,8 +39,7 @@ public final class Frame {
 		if (program == null) {
 			return null;
 		}
-		return new Frame(id, program, tag.getInt("start"), Math.max(0, tag.getInt("pc")));
-	}
+		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));	}
 
 	public ResourceLocation programId() {
 		return programId;
@@ -48,11 +47,6 @@ public final class Frame {
 
 	public Program program() {
 		return program;
-	}
-
-	/** Age of the rocket when this frame was pushed; the frame's timeline starts here. */
-	public int startAge() {
-		return startAge;
 	}
 
 	public int pc() {
@@ -63,11 +57,28 @@ public final class Frame {
 		pc++;
 	}
 
+	/** @return the age this frame's wait is satisfied at, or {@link #NO_WAIT} when it is not waiting */
+	public int waitUntil() {
+		return waitUntil;
+	}
+
+	public boolean waiting() {
+		return waitUntil != NO_WAIT;
+	}
+
+	public void waitUntil(int age) {
+		this.waitUntil = Math.max(NO_WAIT, age);
+	}
+
+	public void clearWait() {
+		this.waitUntil = NO_WAIT;
+	}
+
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("id", programId.toString());
-		tag.putInt("start", startAge);
 		tag.putInt("pc", pc);
+		tag.putInt("wait", waitUntil);
 		return tag;
 	}
 }
