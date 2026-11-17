@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
+import com.magic.firework.config.FireworkLimits;
 import com.magic.firework.content.FireworkProfile;
 import com.magic.firework.effect.Sounds;
 import com.magic.firework.effect.TrailEmitter;
@@ -42,6 +43,8 @@ public class MagicFireworkEntity extends Entity {
 
 	public MagicFireworkEntity(EntityType<? extends MagicFireworkEntity> type, Level level) {
 		super(type, level);
+		// Vanilla gravity stays off on purpose: FlightStep applies the brake itself, along the flight
+		// line, so the rocket stops at rest instead of being pulled back down.
 		this.setNoGravity(true);
 	}
 
@@ -55,6 +58,9 @@ public class MagicFireworkEntity extends Entity {
 	 * Creates one rocket from a spec. The spec is the whole definition: the profile whose
 	 * program and defaults it runs, the per-instance overlay, and the child tree its
 	 * {@code spawn} ops may name by slot.
+	 *
+	 * <p>How deep a split chain may go is a safety constant, not something an item declares:
+	 * {@link FireworkLimits#maxDepth} bounds every generation, whatever the data packs say.
 	 *
 	 * @param parent the rocket that split this one, or {@code null} for a launch
 	 */
@@ -70,7 +76,7 @@ public class MagicFireworkEntity extends Entity {
 		}
 		AttributeBag base = profile.defaults().overlay(spec.overlay());
 		int depth = parent == null ? 0 : parent.depth() + 1;
-		if (parent != null && depth > Attributes.MAX_DEPTH.get(parent.bag())) {
+		if (parent != null && depth > FireworkLimits.maxDepth) {
 			return null;
 		}
 		long seed = parent == null ? level.random.nextLong() : parent.brain.nextChildSeed();
@@ -113,7 +119,7 @@ public class MagicFireworkEntity extends Entity {
 			// what makes the rocket advance on every client tick instead of stepping at the
 			// packet rate, which is what made it look jerky.
 			if (brain.initialized()) {
-				setDeltaMovement(FlightStep.step(bag, getDeltaMovement()));
+				setDeltaMovement(FlightStep.step(getDeltaMovement()));
 				move(MoverType.SELF, getDeltaMovement());
 			}
 			TrailEmitter.trail(level(), position(), bag, brain.seed(), brain.age());
@@ -126,7 +132,7 @@ public class MagicFireworkEntity extends Entity {
 			return;
 		}
 		ServerLevel level = (ServerLevel) level();
-		setDeltaMovement(FlightStep.step(bag, getDeltaMovement()));
+		setDeltaMovement(FlightStep.step(getDeltaMovement()));
 		Effect.TickResult result = brain.tick(runtime.definitions()::program);
 		apply(level, runtime, result.effects());
 
@@ -152,7 +158,8 @@ public class MagicFireworkEntity extends Entity {
 			if (effect instanceof Effect.SetVelocity set) {
 				setDeltaMovement(set.velocity());
 			} else if (effect instanceof Effect.Burst) {
-				runtime.shows().burst(level, position(), brain.bag(), brain.seed());
+				AttributeBag bag = brain.bag();
+				runtime.shows().burst(level, position(), bag, brain.seed(), Attributes.FLICKER.get(bag));
 			} else if (effect instanceof Effect.SpawnChild child) {
 				scheduleChild(level, runtime, child);
 			} else if (effect instanceof Effect.PlaySound sound) {

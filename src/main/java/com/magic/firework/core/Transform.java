@@ -32,6 +32,14 @@ public final class Transform {
 		return new Transform(Vec3.ZERO, matrix(rotX, rotY, rotZ), 1.0);
 	}
 
+	/**
+	 * Rotation plus uniform scale around the origin, which is all a per-burst adjustment needs:
+	 * no translation, so the figure stays centred on where the rocket actually burst.
+	 */
+	public static Transform rotation(double rotX, double rotY, double rotZ, double scale) {
+		return new Transform(Vec3.ZERO, matrix(rotX, rotY, rotZ), scale > 0.0 ? scale : 1.0);
+	}
+
 	/** Reflection across the selected local axes; used by {@link com.magic.firework.core.shape.Form.Mirror}. */
 	public static Transform mirror(boolean x, boolean y, boolean z) {
 		double sx = x ? -1.0 : 1.0;

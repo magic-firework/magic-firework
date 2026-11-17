@@ -49,6 +49,14 @@ class ProgramParserTest {
 	}
 
 	@Test
+	void flickerIsNotAnOp() {
+		// It is an attribute now: a program that still says "flicker" must fail loudly.
+		assertThrows(ProgramParser.ProgramException.class, () -> ProgramParser.parse(ID, nbt("""
+				[{ "op": "flicker" }]
+				""")));
+	}
+
+	@Test
 	void aWaitWithoutTicksSpendsTheFlightTime() throws Exception {
 		Program program = ProgramParser.parse(ID, nbt("""
 				[{ "op": "wait" }]

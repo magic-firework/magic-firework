@@ -8,6 +8,7 @@ import java.util.function.Function;
 
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
+import com.magic.firework.config.FireworkLimits;
 import com.magic.firework.content.FireworkProfile;
 import com.magic.firework.rocket.RocketSpec;
 
@@ -24,8 +25,8 @@ import net.minecraft.resources.ResourceLocation;
  * rocket the player had to build. The recursion walks the same tree the launch does, so a bill
  * can never describe a different rocket than the item holds.
  *
- * <p>Every number comes from a clamped attribute, so a forged {@code max.children} cannot make
- * the bill negative or unbounded, and {@link Cost} clamps the merged total.
+ * <p>Every number comes from a clamped attribute or a {@link FireworkLimits} constant, and
+ * {@link Cost} clamps the merged total, so a bill can neither go negative nor be unbounded.
  */
 public final class FormulaCost {
 	public static final String PAPER = "minecraft:paper";
@@ -55,9 +56,8 @@ public final class FormulaCost {
 			Map<String, Integer> bill) {
 		FireworkProfile profile = profiles.apply(spec.profileId());
 		AttributeBag bag = profile == null ? spec.overlay() : profile.defaults().overlay(spec.overlay());
-		int depth = Attributes.MAX_DEPTH.get(bag);
-		int children = Attributes.MAX_CHILDREN.get(bag);
-		int gunpowder = Math.max(1, Math.min(MAX_GUNPOWDER, 1 + depth / 4 + children / 16));
+		int gunpowder = Math.max(1, Math.min(MAX_GUNPOWDER,
+				1 + FireworkLimits.maxDepth / 4 + FireworkLimits.maxChildren / 16));
 		add(bill, PAPER, 1);
 		add(bill, GUNPOWDER, gunpowder);
 		if (Attributes.TRAIL.get(bag)) {

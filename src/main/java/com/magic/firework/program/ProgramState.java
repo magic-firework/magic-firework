@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.magic.firework.attribute.AttributeBag;
-import com.magic.firework.attribute.Attributes;
 import com.magic.firework.config.FireworkLimits;
 
 import net.minecraft.nbt.CompoundTag;
@@ -28,6 +27,7 @@ public final class ProgramState {
 	private long childSeedMix;
 	private boolean initialized;
 
+	/** A root launch: every rocket uses the nesting budget from {@link FireworkLimits}. */
 	public static ProgramState start(Program root, AttributeBag base, long seed, int depth) {
 		ProgramState state = new ProgramState();
 		state.base = base == null ? AttributeBag.EMPTY : base;
@@ -83,6 +83,11 @@ public final class ProgramState {
 		return depth;
 	}
 
+	/** Deepest generation this rocket's descendants may reach; fixed by {@link FireworkLimits}. */
+	public int depthLimit() {
+		return FireworkLimits.maxDepth;
+	}
+
 	public int childCount() {
 		return childCount;
 	}
@@ -134,7 +139,7 @@ public final class ProgramState {
 	}
 
 	public boolean tryConsumeChild() {
-		if (childCount >= Attributes.MAX_CHILDREN.get(bag())) {
+		if (childCount >= FireworkLimits.maxChildren) {
 			return false;
 		}
 		childCount++;

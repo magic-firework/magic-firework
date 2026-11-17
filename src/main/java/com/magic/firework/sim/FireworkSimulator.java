@@ -62,8 +62,7 @@ public final class FireworkSimulator {
 		for (int tick = 0; tick < maxTicks; tick++) {
 			state.tickAge();
 			ticks++;
-			AttributeBag bag = state.bag();
-			velocity = FlightStep.step(bag, velocity);
+			velocity = FlightStep.step(velocity);
 
 			InterpreterContext ctx = new InterpreterContext(lookup, lookDirection);
 			Effect.TickResult result = Interpreter.tick(state, ctx);

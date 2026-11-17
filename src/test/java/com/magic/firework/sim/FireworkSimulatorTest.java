@@ -21,14 +21,13 @@ import net.minecraft.world.phys.Vec3;
 
 class FireworkSimulatorTest {
 	private static final ResourceLocation UP = new ResourceLocation("test", "up");
-	private static final ResourceLocation HOVER = new ResourceLocation("test", "hover");
 	private static final ResourceLocation SPLIT = new ResourceLocation("test", "split");
 	private static final Vec3 UP_LOOK = new Vec3(0.0, 1.0, 0.0);
 
 	@Test
 	void fliesUpAndBursts() {
 		Program program = new Program(UP, List.of(
-				new Op.Launch(0.2F),
+				new Op.Launch(0.6F),
 				new Op.Wait.Ticks(10),
 				new Op.Burst(),
 				new Op.End()));
@@ -44,7 +43,7 @@ class FireworkSimulatorTest {
 	@Test
 	void aWaitKeepsTheRocketFlyingBeforeTheBurst() {
 		Program program = new Program(UP, List.of(
-				new Op.Launch(0.2F),
+				new Op.Launch(0.6F),
 				new Op.Wait.Ticks(10),
 				new Op.Burst(),
 				new Op.End()));
@@ -58,40 +57,54 @@ class FireworkSimulatorTest {
 	}
 
 	@Test
-	void maxSpeedZeroKeepsTheRocketInOnePlace() {
-		Program program = new Program(HOVER, List.of(
-				new Op.Launch(0.3F),
-				new Op.Wait.Ticks(20),
-				new Op.End()));
-		// Attributes are fixed at launch: hovering is a property of the bag, not an op.
-		AttributeBag base = AttributeBag.EMPTY
-				.withFloat(Attributes.MAX_SPEED.key(), 0.0F)
-				.withFloat(Attributes.GRAVITY.key(), 0.0F);
-
-		FireworkSimulator.Result result = FireworkSimulator.run(program, null, ProgramLookup.of(Map.of()),
-				base, Vec3.ZERO, UP_LOOK, 100, Double.NEGATIVE_INFINITY);
-
-		assertTrue(result.finished());
-		List<FireworkSimulator.Sample> samples = result.samples();
-		Vec3 settled = samples.get(1).position();
-		Vec3 atEnd = samples.get(samples.size() - 1).position();
-		assertEquals(settled.y, atEnd.y, 1.0E-6);
-	}
-
-	@Test
-	void gravityBringsTheRocketDownWhileItWaits() {
+	void theBrakeBleedsTheRiseToAHover() {
 		Program program = new Program(UP, List.of(
-				new Op.Launch(0.2F),
+				new Op.Launch(0.4F),
 				new Op.Wait.Ticks(40),
 				new Op.End()));
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, null, ProgramLookup.of(Map.of()),
-				AttributeBag.EMPTY.withFloat(Attributes.GRAVITY.key(), 0.05F), Vec3.ZERO, UP_LOOK, 100,
-				Double.NEGATIVE_INFINITY);
+				AttributeBag.EMPTY, Vec3.ZERO, UP_LOOK, 100, Double.NEGATIVE_INFINITY);
 
-		double highest = result.maxHeight();
-		double last = result.lastPosition().y;
-		assertTrue(last < highest, "gravity pulls it back down while the program waits");
+		List<FireworkSimulator.Sample> samples = result.samples();
+		// One tick of braking takes 0.08 off the speed...
+		assertEquals(0.32, samples.get(1).velocity().y, 1.0E-6);
+		// ...down to rest, and never past it: the rest of the wait is spent hovering.
+		for (FireworkSimulator.Sample sample : samples) {
+			assertTrue(sample.velocity().y >= 0.0, "the brake must never point the rocket down");
+		}
+		assertEquals(1.2, samples.get(samples.size() - 1).position().y, 1.0E-6);
+		assertTrue(result.finished());
+	}
+
+	@Test
+	void anAimedShotStopsWithoutChangingItsLine() {
+		// 45° up and 45° to the launcher's right: the same brake, taken off the whole speed, so the
+		// shot keeps its heading all the way and simply runs out of it.
+		AttributeBag base = AttributeBag.EMPTY
+				.withFloat(Attributes.DIRECTION_YAW.key(), 45.0F)
+				.withFloat(Attributes.DIRECTION_PITCH.key(), 45.0F);
+		Program program = new Program(UP, List.of(
+				new Op.Launch(0.4F),
+				new Op.Wait.Ticks(40),
+				new Op.End()));
+
+		FireworkSimulator.Result result = FireworkSimulator.run(program, null, ProgramLookup.of(Map.of()),
+				base, Vec3.ZERO, UP_LOOK, 100, Double.NEGATIVE_INFINITY);
+
+		Vec3 heading = new Vec3(-0.5, Math.sqrt(0.5), 0.5);
+		List<FireworkSimulator.Sample> samples = result.samples();
+		for (FireworkSimulator.Sample sample : samples) {
+			if (sample.velocity().lengthSqr() > 1.0E-9) {
+				assertTrue(sample.velocity().cross(heading).lengthSqr() < 1.0E-9,
+						"braking must not bend the flight line: " + sample.velocity());
+			}
+		}
+		Vec3 atRest = samples.get(samples.size() - 1).position();
+		assertEquals(1.2 * heading.x, atRest.x, 1.0E-6);
+		assertEquals(1.2 * heading.y, atRest.y, 1.0E-6);
+		assertEquals(1.2 * heading.z, atRest.z, 1.0E-6);
+		assertEquals(0.0, samples.get(samples.size() - 1).velocity().length(), 1.0E-9);
 	}
 
 	@Test
@@ -101,7 +114,7 @@ class FireworkSimulatorTest {
 				new Op.Spawn(List.of(SpawnTarget.of(child.id()), SpawnTarget.of(child.id()),
 						SpawnTarget.of(child.id()), SpawnTarget.of(child.id())), 0),
 				new Op.End()));
-		AttributeBag base = AttributeBag.EMPTY.withInt(Attributes.MAX_CHILDREN.key(), 4);
+		AttributeBag base = AttributeBag.EMPTY;
 
 		FireworkSimulator.Result result = FireworkSimulator.run(program, RocketSpec.of(SPLIT),
 				ProgramLookup.of(Map.of(child.id(), child)), base, Vec3.ZERO, UP_LOOK, 20,

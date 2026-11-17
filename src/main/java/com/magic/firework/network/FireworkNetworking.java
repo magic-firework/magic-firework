@@ -31,7 +31,7 @@ import net.minecraft.world.phys.Vec3;
  * drops the packet instead of misreading it.
  */
 public final class FireworkNetworking {
-	public static final int PROTOCOL_VERSION = 2;
+	public static final int PROTOCOL_VERSION = 3;
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
@@ -123,14 +123,20 @@ public final class FireworkNetworking {
 	public record Profile(int entityId, long seed, int age, Vec3 velocity, AttributeBag bag) {
 	}
 
-	public static void sendCloud(ServerPlayer player, Vec3 origin, FrameStream stream) {
+	public static void sendCloud(ServerPlayer player, Vec3 origin, FrameStream stream, boolean flicker) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
+		writeCloud(buf, origin, stream, flicker);
+		ServerPlayNetworking.send(player, CLOUD_CHANNEL, buf);
+	}
+
+	/** The wire format of one burst, split out from the send so a test can round-trip it. */
+	public static void writeCloud(FriendlyByteBuf buf, Vec3 origin, FrameStream stream, boolean flicker) {
 		buf.writeByte(PROTOCOL_VERSION);
 		buf.writeDouble(origin.x);
 		buf.writeDouble(origin.y);
 		buf.writeDouble(origin.z);
+		buf.writeBoolean(flicker);
 		CloudProtocol.write(buf, stream);
-		ServerPlayNetworking.send(player, CLOUD_CHANNEL, buf);
 	}
 
 	/** @return the cloud, or {@code null} when the packet came from another protocol version */
@@ -140,10 +146,11 @@ public final class FireworkNetworking {
 			return null;
 		}
 		Vec3 origin = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
-		return new CloudPacket(origin, CloudProtocol.read(buf));
+		boolean flicker = buf.readBoolean();
+		return new CloudPacket(origin, CloudProtocol.read(buf), flicker);
 	}
 
-	/** A baked burst: point offsets relative to {@code origin}. */
-	public record CloudPacket(Vec3 origin, FrameStream stream) {
+	/** A baked burst: point offsets relative to {@code origin}, and whether it should flicker. */
+	public record CloudPacket(Vec3 origin, FrameStream stream, boolean flicker) {
 	}
 }
