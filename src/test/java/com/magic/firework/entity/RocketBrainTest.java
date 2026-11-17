@@ -28,7 +28,6 @@ class RocketBrainTest {
 	private static final ResourceLocation ROOT = new ResourceLocation("test", "root");
 	private static final ResourceLocation CHILD = new ResourceLocation("test", "child");
 	private static final Vec3 UP = new Vec3(0.0, 1.0, 0.0);
-
 	private static Program program(ResourceLocation id, Op... ops) {
 		return new Program(id, List.of(ops));
 	}
@@ -102,6 +101,7 @@ class RocketBrainTest {
 		assertEquals(brain.age(), restored.age());
 		assertEquals(brain.seed(), restored.seed());
 		assertEquals(brain.depth(), restored.depth());
+		assertEquals(brain.depthLimit(), restored.depthLimit());
 		assertEquals(brain.bag(), restored.bag());
 	}
 

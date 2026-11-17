@@ -17,8 +17,8 @@ import net.minecraft.resources.ResourceLocation;
  */
 public sealed interface Op {
 	/**
-	 * Sets the velocity somewhere the attributes decide: {@code flight.direction.mode}
-	 * {@code relative} aims from the launcher's heading, anything else goes straight up.
+	 * Sets the velocity somewhere the attributes decide: {@code flight.direction.yaw} and
+	 * {@code flight.direction.pitch} aim the launch from the launcher's heading.
 	 *
 	 * <p>There is no direction parameter because the bag already owns one. A program can never
 	 * disagree with the rocket it is running in.

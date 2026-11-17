@@ -117,22 +117,12 @@ public final class Interpreter {
 	}
 
 	/**
-	 * The bag is the only source of direction: {@code relative} aims from the launcher's heading,
-	 * anything else (including the default {@code up}) goes straight up. The editor writes
-	 * {@code relative} when a dial is turned, so an aimed rocket and a straight one run the same
-	 * program.
+	 * The bag is the only source of direction, and it is always the crafting table's two dials:
+	 * horizontal 0° is straight ahead of whoever launched the rocket and grows toward their
+	 * right, while the vertical dial is the polar angle from world up (0° = up). Both at 0° is a
+	 * straight ascent, so an untouched firework and an aimed one run the same program.
 	 */
 	private static Vec3 launchDirection(AttributeBag bag, Vec3 look) {
-		return "relative".equalsIgnoreCase(Attributes.DIRECTION_MODE.get(bag))
-				? relative(bag, look)
-				: new Vec3(0.0, 1.0, 0.0);
-	}
-
-	/**
-	 * The direction relative to whoever launched the rocket: horizontal 0° is straight ahead and
-	 * grows toward their right; the vertical dial is the polar angle from world up (0° = up).
-	 */
-	private static Vec3 relative(AttributeBag bag, Vec3 look) {
 		double yaw = Math.toRadians(Attributes.DIRECTION_YAW.get(bag));
 		double polar = Math.toRadians(Attributes.DIRECTION_PITCH.get(bag));
 

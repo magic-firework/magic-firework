@@ -27,8 +27,8 @@ class FormulaCostTest {
 	}
 
 	@Test
-	void defaultsFollowTheBuiltInAttributes() {
-		// max.depth 3 and max.children 32 -> 1 + 0 + 2 gunpowder
+	void defaultsFollowTheBuiltInLimits() {
+		// FireworkLimits.maxDepth 3 and maxChildren 32 -> 1 + 0 + 2 gunpowder
 		List<Cost> cost = bill(AttributeBag.EMPTY);
 		assertEquals(1, count(cost, FormulaCost.PAPER));
 		assertEquals(3, count(cost, FormulaCost.GUNPOWDER));
@@ -42,31 +42,22 @@ class FormulaCostTest {
 	}
 
 	@Test
-	void gunpowderFollowsDepthAndChildren() {
-		AttributeBag bag = Attributes.MAX_DEPTH.set(AttributeBag.EMPTY, 8);
-		bag = Attributes.MAX_CHILDREN.set(bag, 64);
-		// 1 + 8/4 + 64/16 = 7
-		assertEquals(7, count(bill(bag), FormulaCost.GUNPOWDER));
-	}
-
-	@Test
-	void gunpowderIsClampedEvenIfTheTagIsHuge() {
-		AttributeBag bag = Attributes.MAX_DEPTH.set(AttributeBag.EMPTY, 16);
-		bag = Attributes.MAX_CHILDREN.set(bag, 256);
-		// 1 + 4 + 16 would be 21; the bill caps at 8 so it still fits a grid.
-		assertEquals(8, count(bill(bag), FormulaCost.GUNPOWDER));
+	void gunpowderIsFixedByTheConfigLimits() {
+		// Depth and children are safety constants now, so an attribute cannot buy more gunpowder.
+		AttributeBag bag = Attributes.TRAIL.set(AttributeBag.EMPTY, false);
+		assertEquals(3, count(bill(bag), FormulaCost.GUNPOWDER));
 	}
 
 	@Test
 	void profileDefaultsApplyAndOverlayWins() {
-		// The profile only overrides depth; children keeps its built-in default of 32.
-		AttributeBag defaults = Attributes.MAX_DEPTH.set(AttributeBag.EMPTY, 4);
+		// The profile switches the trail off; the item overlay still wins for glowstone.
+		AttributeBag defaults = Attributes.TRAIL.set(AttributeBag.EMPTY, false);
 		FireworkProfile profile = new FireworkProfile(RING, null, defaults);
-		assertEquals(4, count(bill(profile, AttributeBag.EMPTY), FormulaCost.GUNPOWDER));
+		assertEquals(0, count(bill(profile, AttributeBag.EMPTY), FormulaCost.GLOWSTONE));
+		assertEquals(3, count(bill(profile, AttributeBag.EMPTY), FormulaCost.GUNPOWDER));
 
-		AttributeBag overlay = Attributes.MAX_DEPTH.set(AttributeBag.EMPTY, 0);
-		overlay = Attributes.MAX_CHILDREN.set(overlay, 0);
-		assertEquals(1, count(bill(profile, overlay), FormulaCost.GUNPOWDER));
+		AttributeBag overlay = Attributes.TRAIL.set(AttributeBag.EMPTY, true);
+		assertEquals(1, count(bill(profile, overlay), FormulaCost.GLOWSTONE));
 	}
 
 	@Test

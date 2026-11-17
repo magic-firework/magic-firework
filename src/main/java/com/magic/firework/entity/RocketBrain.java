@@ -91,6 +91,11 @@ public final class RocketBrain {
 		return state.depth();
 	}
 
+	/** Deepest generation this rocket's children may reach; fixed by {@code FireworkLimits}. */
+	public int depthLimit() {
+		return state.depthLimit();
+	}
+
 	public AttributeBag bag() {
 		return state.bag();
 	}

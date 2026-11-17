@@ -3,7 +3,6 @@
   "attributes": {
     "flight.speed": 0.26,
     "flight.ticks": 34,
-    "flight.drag": 0.985,
     "trail.enabled": true,
     "trail.interval": 1,
     "trail.scale": 0.5,

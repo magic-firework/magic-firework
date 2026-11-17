@@ -1,7 +1,5 @@
 package com.magic.firework.attribute;
 
-import com.magic.firework.config.FireworkLimits;
-
 /**
  * Every built-in attribute key.
  *
@@ -14,27 +12,22 @@ public final class Attributes {
 	}
 
 	// ── flight ───────────────────────────────────────────────────────────────
-	/** Launch speed in blocks/tick; when present it overrides the launch op's speed. */
+	/**
+	 * Launch speed in blocks/tick; when present it overrides the launch op's speed. Its range top
+	 * is {@link com.magic.firework.config.FireworkLimits#maxSpeed}, the hard velocity ceiling.
+	 */
 	public static final Attr.FloatAttr SPEED = new Attr.FloatAttr("flight.speed", 0.1F, 0.0F, 4.0F);
-	/** Downward acceleration per tick. 0 keeps the rocket hovering. */
-	public static final Attr.FloatAttr GRAVITY = new Attr.FloatAttr("flight.gravity", 0.0F, -1.0F, 1.0F);
-	/** Velocity cap per tick: 0 keeps the rocket in place while its program's clock runs. */
-	public static final Attr.FloatAttr MAX_SPEED = new Attr.FloatAttr("flight.max_speed", 4.0F, 0.0F, 8.0F);
-	/** Velocity multiplier per tick (1.0 = no drag). */
-	public static final Attr.FloatAttr DRAG = new Attr.FloatAttr("flight.drag", 0.99F, 0.0F, 1.0F);
 	/**
 	 * Flight time in ticks: what a {@code wait} without a number spends, and therefore how long
 	 * the rocket rises before whatever the program does next. The crafting table edits this, so
 	 * the player owns it and a data pack never has to guess.
 	 */
 	public static final Attr.IntAttr FLIGHT_TICKS = new Attr.IntAttr("flight.ticks", 40, 0, 400);
-	/** {@code up} | {@code look} | {@code relative}. */
-	public static final Attr.StringAttr DIRECTION_MODE = new Attr.StringAttr("flight.direction.mode", "up");
 	/**
 	 * The direction editor's two dials in degrees (0–360), relative to whoever launches the
 	 * rocket: horizontal 0° is straight ahead, growing toward their right, and the vertical dial
-	 * is the polar angle from up (0° = up). They pair with {@code flight.direction.mode =
-	 * "relative"}; the world vector is resolved at launch.
+	 * is the polar angle from up (0° = up). Both at 0° is a straight ascent, so an untouched
+	 * firework and an aimed one run the same program; the world vector is resolved at launch.
 	 */
 	public static final Attr.FloatAttr DIRECTION_YAW = new Attr.FloatAttr("flight.direction.yaw", 0.0F, 0.0F, 360.0F);
 	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 360.0F);
@@ -44,12 +37,6 @@ public final class Attributes {
 	public static final Attr.BoolAttr DECORATIVE = new Attr.BoolAttr("decorative", true);
 	/** Ticks the entity stays alive after its program ends. */
 	public static final Attr.IntAttr AFTERGLOW = new Attr.IntAttr("afterglow", 0, 0, 200);
-	/** Maximum nested split depth (0 = this rocket may not spawn children). */
-	public static final Attr.IntAttr MAX_DEPTH = new Attr.IntAttr("max.depth", FireworkLimits.maxDepth, 0,
-			FireworkLimits.maxDepthCeiling);
-	/** Maximum children this rocket may spawn over its whole life. */
-	public static final Attr.IntAttr MAX_CHILDREN = new Attr.IntAttr("max.children", FireworkLimits.maxChildren, 0,
-			FireworkLimits.maxChildrenCeiling);
 
 	// ── trail ────────────────────────────────────────────────────────────────
 	public static final Attr.BoolAttr TRAIL = new Attr.BoolAttr("trail.enabled", true);
@@ -70,6 +57,22 @@ public final class Attributes {
 	// ── content ──────────────────────────────────────────────────────────────
 	/** Id of the {@code Show} a {@code burst} op bakes. This is the only content source. */
 	public static final String SHOW = "show";
+	/**
+	 * Per-burst colour override (ARGB). Absent means the show's own palette decides, which is what
+	 * a multi-colour show wants; present means every point of <em>this</em> burst uses it.
+	 *
+	 * <p>It is a raw key rather than an {@link Attr} because ARGB values are negative ints and a
+	 * clamped attribute would mangle them; "absent" is expressed by the key not being there.
+	 */
+	public static final String SHOW_COLOR = "show.color";
+	/** Per-burst geometry scale around the burst origin; 1.0 keeps the show's own size. */
+	public static final Attr.FloatAttr SHOW_SIZE = new Attr.FloatAttr("show.size", 1.0F, 0.1F, 8.0F);
+	/**
+	 * Per-burst rotation in degrees around the burst origin: yaw around Y, pitch around X. Together
+	 * with {@link #SHOW_SIZE} this is how one primitive show serves every node of a figure.
+	 */
+	public static final Attr.FloatAttr SHOW_YAW = new Attr.FloatAttr("show.yaw", 0.0F, -360.0F, 360.0F);
+	public static final Attr.FloatAttr SHOW_PITCH = new Attr.FloatAttr("show.pitch", 0.0F, -360.0F, 360.0F);
 	/**
 	 * Make every burst of this rocket flicker, the way a vanilla firework star's Flicker flag
 	 * makes its sparks blink back instead of fading once.

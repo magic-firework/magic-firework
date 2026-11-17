@@ -137,16 +137,10 @@ private static final String COMMAND_DOCUMENT =
 		CompoundTag overlay = new CompoundTag();
 		overlay.putFloat("flight.speed", 0.28F);
 		overlay.putInt("flight.ticks", 45);
-		overlay.putFloat("flight.gravity", 0.0F);
-		overlay.putFloat("flight.max_speed", 1.4F);
-		overlay.putFloat("flight.drag", 0.97F);
-		overlay.putString("flight.direction.mode", "relative");
 		overlay.putFloat("flight.direction.yaw", 0.0F);
 		overlay.putFloat("flight.direction.pitch", 0.0F);
 		overlay.putBoolean("decorative", true);
 		overlay.putInt("afterglow", 12);
-		overlay.putInt("max.depth", 3);
-		overlay.putInt("max.children", 8);
 		overlay.putBoolean("trail.enabled", true);
 		overlay.putInt("trail.interval", 1);
 		overlay.putFloat("trail.scale", 0.7F);

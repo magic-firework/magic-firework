@@ -17,7 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 
-/** The tree is item data a player can forge, so every read is bounded. */
+/** The tree is item data a player can forge, so every read is bounded by a node budget. */
 class RocketSpecTest {
 	private static final ResourceLocation ROOT = new ResourceLocation("test", "root");
 	private static final ResourceLocation CHILD = new ResourceLocation("test", "child");
@@ -60,13 +60,14 @@ class RocketSpecTest {
 	}
 
 	@Test
-	void aForgedDeeperTreeIsTruncatedToTheLimit() {
-		CompoundTag tag = chainOfCompounds(FireworkLimits.maxNestingDepth + 5);
+	void aChainIsKeptAllTheWayDownToTheNodeBudget() {
+		CompoundTag tag = chainOfCompounds(FireworkLimits.maxNestingNodes + 5);
 
 		RocketSpec loaded = RocketSpec.load(tag);
 
 		assertNotNull(loaded);
-		assertEquals(FireworkLimits.maxNestingDepth, depth(loaded));
+		assertEquals(FireworkLimits.maxNestingNodes, depth(loaded),
+				"a chain spends one node per level, so the node budget is the deepest chain an item can describe");
 	}
 
 	@Test

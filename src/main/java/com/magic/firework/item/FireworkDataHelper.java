@@ -1,7 +1,5 @@
 package com.magic.firework.item;
 
-import java.util.List;
-
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.attribute.Attributes;
 import com.magic.firework.content.DefinitionIds;
