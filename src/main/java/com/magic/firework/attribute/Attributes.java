@@ -15,8 +15,12 @@ public final class Attributes {
 	/**
 	 * Launch speed in blocks/tick; when present it overrides the launch op's speed. Its range top
 	 * is {@link com.magic.firework.config.FireworkLimits#maxSpeed}, the hard velocity ceiling.
+	 *
+	 * <p>The default is what a profile or an item that names no speed flies with. The rocket brakes
+	 * at {@code FireworkLimits.deceleration}, so 0.8 peaks about four blocks up; the old 0.1 became
+	 * a dud the moment the brake replaced the old no-gravity flight.
 	 */
-	public static final Attr.FloatAttr SPEED = new Attr.FloatAttr("flight.speed", 0.1F, 0.0F, 4.0F);
+	public static final Attr.FloatAttr SPEED = new Attr.FloatAttr("flight.speed", 0.8F, 0.0F, 4.0F);
 	/**
 	 * Flight time in ticks: what a {@code wait} without a number spends, and therefore how long
 	 * the rocket rises before whatever the program does next. The crafting table edits this, so

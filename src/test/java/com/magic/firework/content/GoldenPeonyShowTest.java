@@ -104,6 +104,6 @@ class GoldenPeonyShowTest {
 				"flight time is the attribute, not a number baked into the profile");
 		assertEquals(34, Attributes.FLIGHT_TICKS.get(defaults), "the profile still ships a starting value");
 		assertEquals(SHOW.toString(), defaults.raw().getString(Attributes.SHOW));
-		assertEquals(0.26F, defaults.raw().getFloat("flight.speed"), 1.0E-6F);
+		assertEquals(1.2F, defaults.raw().getFloat("flight.speed"), 1.0E-6F);
 	}
 }

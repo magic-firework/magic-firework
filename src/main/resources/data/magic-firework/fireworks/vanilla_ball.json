@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
-    "flight.speed": 0.4,
+    "flight.speed": 1.8,
     "flight.ticks": 50,
     "launch.sound": "minecraft:entity.firework_rocket.launch",
     "trail.enabled": true,

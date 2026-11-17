@@ -135,7 +135,7 @@ private static final String COMMAND_DOCUMENT =
 	@Test
 	void theGiveCommandTagResolvesTheRocketItPromises() throws Exception {
 		CompoundTag overlay = new CompoundTag();
-		overlay.putFloat("flight.speed", 0.28F);
+		overlay.putFloat("flight.speed", 1.2F);
 		overlay.putInt("flight.ticks", 45);
 		overlay.putFloat("flight.direction.yaw", 0.0F);
 		overlay.putFloat("flight.direction.pitch", 0.0F);

@@ -1,6 +1,7 @@
 {
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
+    "flight.speed": 0.8,
     "show": "magic-firework:ball",
     "launch.sound": "minecraft:entity.firework_rocket.launch"
   },

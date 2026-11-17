@@ -29,14 +29,15 @@
           "type": "number",
           "minimum": 0,
           "maximum": 4,
-          "description": "Blocks per tick. Overrides the launch op's speed when present."
+          "default": 0.8,
+          "description": "Blocks per tick. Overrides the launch op's speed when present. The rocket brakes at 0.08 a tick along its own line, so this is both how far and how long it climbs; the shipped packs use 0.78-1.8."
         },
         "flight.ticks": {
           "type": "integer",
           "minimum": 0,
           "maximum": 400,
           "default": 40,
-          "description": "Flight time in ticks, edited with string in the crafting table. A `wait` with no `ticks` spends exactly this, so it is how long the rocket rises before the next op."
+          "description": "Flight time in ticks, edited with string in the crafting table. A `wait` with no `ticks` spends exactly this, so it is how long the rocket is airborne: it climbs, brakes to a stop on its own line and hovers there until the wait ends."
         },
         "flight.direction.yaw": {
           "type": "number",

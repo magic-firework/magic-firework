@@ -37,7 +37,7 @@ class AttributeBagTest {
 	void specsClampAndDefault() {
 		AttributeBag outOfRange = AttributeBag.EMPTY.withFloat(Attributes.SPEED.key(), 99.0F);
 		assertEquals(4.0F, Attributes.SPEED.get(outOfRange), 1.0E-6);
-		assertEquals(0.1F, Attributes.SPEED.get(AttributeBag.EMPTY), 1.0E-6);
+		assertEquals(0.8F, Attributes.SPEED.get(AttributeBag.EMPTY), 1.0E-6);
 	}
 
 	@Test
