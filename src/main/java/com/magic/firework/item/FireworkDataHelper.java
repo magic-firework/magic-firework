@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
  * <pre>
  * MagicFirework: {
  *   profile: "magic-firework:ring12",
- *   overlay: { "flight.speed": 0.2, "show": "magic-firework:cube" },   // only what changed
+ *   overlay: { "flight.speed": 1.1, "show": "magic-firework:cube" },   // only what changed
  *   children: [                                                        // optional, crafted nesting
  *     { profile: "magic-firework:ring", overlay: { ... }, children: [ ... ] },
  *     ...

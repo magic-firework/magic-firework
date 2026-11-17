@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
-    "flight.speed": 0.15,
+    "flight.speed": 0.78,
     "flight.ticks": 25,
     "trail.colors": [
       11141375

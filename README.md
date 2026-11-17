@@ -24,7 +24,7 @@ when the list ends.
 
 ```json
 {
-  "attributes": { "flight.speed": 0.2, "flight.ticks": 45, "show": "magic-firework:ring12" },
+  "attributes": { "flight.speed": 1.2, "flight.ticks": 45, "show": "magic-firework:ring12" },
   "program": [
     { "op": "launch" },
     { "op": "wait" },
@@ -51,6 +51,12 @@ Direction comes only from the attributes, never from an op: `flight.direction.ya
 measured from whoever launched the rocket — that is what the crafting table's two dials write.
 Both at 0° is a straight ascent, so an untouched firework needs no direction key at all.
 
+Flight is one straight line. `launch` sets the speed and `FireworkLimits.deceleration` — the
+vanilla 0.08 a tick — takes it back off along that same line, so the rocket climbs, stops where it
+ran out and hovers there until the `wait` ends: the burst happens at the top of the climb, not on
+the way. A speed is therefore a height, roughly `v² / 0.16` blocks, and the shipped packs fly at
+0.78–1.8 (about 4 to 21 blocks).
+
 Hitting a block ends the current `wait`, so an impact bursts on the spot.
 
 ### Nesting
@@ -60,7 +66,7 @@ A rocket can carry child rockets in its item NBT, and a child can carry its own:
 ```text
 MagicFirework: {
   profile: "magic-firework:ring12",
-  overlay: { "flight.speed": 0.2 },
+  overlay: { "flight.speed": 1.2 },
   children: [ { profile: "magic-firework:ring" }, { profile: "magic-firework:cube" } ]
 }
 ```
