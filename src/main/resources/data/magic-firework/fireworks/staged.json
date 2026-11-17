@@ -22,8 +22,12 @@
     },
     {
       "op": "spawn",
-      "profile": "magic-firework:ring",
-      "count": 4,
+      "children": [
+        0,
+        1,
+        2,
+        3
+      ],
       "delay": 2
     }
   ]

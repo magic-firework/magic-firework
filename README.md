@@ -66,7 +66,8 @@ MagicFirework: {
 ```
 
 `spawn` names a child by its slot; the tooltip lists the same `#0`, `#1`, ... numbering. A slot
-the item does not fill spawns nothing. There is no in-game way to compose the tree yet — the
+the item does not fill spawns nothing, so `magic-firework:staged` (which offers slots 0–3) bursts
+on its own and splits only when the item brings children. There is no in-game way to compose the tree yet — the
 editor will build it; until then it comes from item NBT.
 
 Reads are bounded by `FireworkLimits.maxNestingDepth` / `maxNestingNodes`, and `max.depth` /
