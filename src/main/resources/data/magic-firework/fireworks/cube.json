@@ -1,6 +1,7 @@
 {
   "$schema": "../../../schemas/firework.schema.json",
   "attributes": {
+    "flight.speed": 1.1,
     "show": "magic-firework:cube",
     "launch.sound": "minecraft:entity.firework_rocket.launch",
     "afterglow": 20,
@@ -8,8 +9,7 @@
   },
   "program": [
     {
-      "op": "launch",
-      "speed": 0.25
+      "op": "launch"
     },
     {
       "op": "wait"
