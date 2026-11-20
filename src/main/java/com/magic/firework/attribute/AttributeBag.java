@@ -3,11 +3,13 @@ package com.magic.firework.attribute;
 import java.util.Set;
 
 import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
@@ -28,6 +30,8 @@ import net.minecraft.nbt.Tag;
  */
 public final class AttributeBag {
 	public static final AttributeBag EMPTY = new AttributeBag(new CompoundTag());
+	private static final Set<String> BOOLEAN_KEYS = Set.of(
+			Attributes.DECORATIVE.key(), Attributes.TRAIL.key(), Attributes.FLICKER.key());
 
 	private final CompoundTag tag;
 
@@ -36,7 +40,17 @@ public final class AttributeBag {
 	}
 
 	public static AttributeBag of(CompoundTag tag) {
-		return tag == null || tag.isEmpty() ? EMPTY : new AttributeBag(tag.copy());
+		if (tag == null || tag.isEmpty()) {
+			return EMPTY;
+		}
+		CompoundTag copy = tag.copy();
+		for (String key : BOOLEAN_KEYS) {
+			Tag value = copy.get(key);
+			if (value instanceof NumericTag numeric && !(value instanceof ByteTag)) {
+				copy.putBoolean(key, numeric.getAsInt() != 0);
+			}
+		}
+		return new AttributeBag(copy);
 	}
 
 	public static AttributeBag load(Tag tag) {

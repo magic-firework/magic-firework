@@ -3,6 +3,9 @@ package com.magic.firework.content;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +39,34 @@ public final class NbtTree {
 
 	/** Stable 64-bit FNV-1a fingerprint of the canonical bytes of {@code tag}. */
 	public static long fingerprint(Tag tag) {
+		byte[] bytes = canonicalBytes(tag);
+		long hash = 0xCBF29CE484222325L;
+		for (byte value : bytes) {
+			hash ^= value & 0xFFL;
+			hash *= 0x100000001B3L;
+		}
+		return hash;
+	}
+
+	/**
+	 * First 16 bytes of SHA-256 over the same canonical bytes, split into two longs.
+	 *
+	 * <p>The 64-bit FNV fingerprint is fine for cache diagnostics but too small to be an
+	 * identity: an inline document is player data. The 128-bit digest is still only a fast
+	 * rejection filter; {@link com.magic.firework.content.ContentRef.Inline#equals(Object)}
+	 * compares the document as well.
+	 */
+	public static long[] fingerprint128(Tag tag) {
+		try {
+			byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonicalBytes(tag));
+			ByteBuffer buffer = ByteBuffer.wrap(digest);
+			return new long[]{buffer.getLong(), buffer.getLong()};
+		} catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException("SHA-256 is required by the JDK", exception);
+		}
+	}
+
+	private static byte[] canonicalBytes(Tag tag) {
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream(256);
 		try (DataOutputStream out = new DataOutputStream(bytes)) {
 			write(tag, out);
@@ -43,12 +74,7 @@ public final class NbtTree {
 			// A ByteArrayOutputStream cannot fail; surface the impossible case loudly.
 			throw new IllegalStateException("cannot serialise NBT", exception);
 		}
-		long hash = 0xCBF29CE484222325L;
-		for (byte value : bytes.toByteArray()) {
-			hash ^= value & 0xFFL;
-			hash *= 0x100000001B3L;
-		}
-		return hash;
+		return bytes.toByteArray();
 	}
 
 	/**
@@ -63,7 +89,7 @@ public final class NbtTree {
 		}
 		return switch (tag.getId()) {
 			case Tag.TAG_BYTE, Tag.TAG_SHORT, Tag.TAG_INT, Tag.TAG_LONG ->
-					new JsonPrimitive(((NumericTag) tag).getAsLong());
+				new JsonPrimitive(((NumericTag) tag).getAsLong());
 			case Tag.TAG_FLOAT -> new JsonPrimitive(((NumericTag) tag).getAsFloat());
 			case Tag.TAG_DOUBLE -> new JsonPrimitive(((NumericTag) tag).getAsDouble());
 			case Tag.TAG_STRING -> new JsonPrimitive(((StringTag) tag).getAsString());

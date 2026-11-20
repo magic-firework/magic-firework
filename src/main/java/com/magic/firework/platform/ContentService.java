@@ -30,9 +30,9 @@ public final class ContentService {
 	private volatile long libraryVersion = -1;
 
 	/** Parsed inline shows, least-recently-used first. */
-	private final Map<Long, Optional<Show>> inlineCache = new LinkedHashMap<>(16, 0.75F, true) {
+	private final Map<ContentRef.Inline, Optional<Show>> inlineCache = new LinkedHashMap<>(16, 0.75F, true) {
 		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, Optional<Show>> eldest) {
+		protected boolean removeEldestEntry(Map.Entry<ContentRef.Inline, Optional<Show>> eldest) {
 			return size() > ContentLimits.MAX_INLINE_CACHE;
 		}
 	};
@@ -75,7 +75,7 @@ public final class ContentService {
 			return installed != null ? installed : libraryShow(byId.id()).orElse(null);
 		}
 		ContentRef.Inline inline = (ContentRef.Inline) ref;
-		return inlineCache.computeIfAbsent(inline.fingerprint(), key -> parseInline(inline)).orElse(null);
+		return inlineCache.computeIfAbsent(inline, key -> parseInline(inline)).orElse(null);
 	}
 
 	private Optional<Show> libraryShow(Id id) {
@@ -101,7 +101,7 @@ public final class ContentService {
 	}
 
 	private Optional<Show> parseInline(ContentRef.Inline inline) {
-		Id id = new Id(ContentLibrary.NAMESPACE, "inline/" + Long.toHexString(inline.fingerprint()));
+		Id id = new Id(ContentLibrary.NAMESPACE, "inline/" + inline.fingerprintHex());
 		try {
 			return Optional.of(TagCodec.parseShow(id, inline.document(), this::ink));
 		} catch (TagCodec.CodecException | RuntimeException exception) {

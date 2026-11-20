@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
+import com.magic.firework.content.JsonToNbt;
+
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.nbt.CompoundTag;
@@ -52,13 +55,26 @@ class AttributeBagTest {
 	@Test
 	void jsonDirectionIsPreserved() {
 		CompoundTag source = new CompoundTag();
-		source.put("trail.colors", new net.minecraft.nbt.IntArrayTag(new int[] {1, 2, 3}));
+		source.put("trail.colors", new net.minecraft.nbt.IntArrayTag(new int[]{1, 2, 3}));
 
 		AttributeBag bag = AttributeBag.load(source);
 		AttributeBag copy = AttributeBag.load(bag.save());
 
 		assertTrue(copy.raw().contains("trail.colors"));
 		assertEquals(3, copy.raw().getIntArray("trail.colors").length);
+	}
+
+	@Test
+	void booleanRepresentationsCanonicalize() {
+		AttributeBag api = AttributeBag.EMPTY.withBoolean(Attributes.FLICKER.key(), true);
+		AttributeBag json = AttributeBag.load(JsonToNbt.convert(
+				JsonParser.parseString("{\"flicker\":true}")));
+		CompoundTag legacy = new CompoundTag();
+		legacy.putInt(Attributes.FLICKER.key(), 1);
+
+		assertEquals(api, json);
+		assertEquals(api.hashCode(), json.hashCode());
+		assertEquals(api, AttributeBag.load(legacy));
 	}
 
 	@Test

@@ -28,7 +28,8 @@ public sealed interface ContentRef {
 	/** Content embedded in the value that carries it, e.g. an item's NBT. */
 	final class Inline implements ContentRef {
 		private final CompoundTag document;
-		private final long fingerprint;
+		private final long fingerprintHigh;
+		private final long fingerprintLow;
 
 		public Inline(CompoundTag document) {
 			if (document == null) {
@@ -40,7 +41,9 @@ public sealed interface ContentRef {
 						"inline content is larger than " + ContentLimits.MAX_INLINE_BYTES + " bytes");
 			}
 			this.document = copy;
-			this.fingerprint = NbtTree.fingerprint(copy);
+			long[] digest = NbtTree.fingerprint128(copy);
+			this.fingerprintHigh = digest[0];
+			this.fingerprintLow = digest[1];
 		}
 
 		/** A defensive copy: the fingerprint and the document must never diverge. */
@@ -48,23 +51,32 @@ public sealed interface ContentRef {
 			return document.copy();
 		}
 
+		/** First 64 bits of the 128-bit digest, kept for existing callers and logs. */
 		public long fingerprint() {
-			return fingerprint;
+			return fingerprintHigh;
+		}
+
+		/** Both halves as hex, used in the cache-facing inline id. */
+		public String fingerprintHex() {
+			return Long.toHexString(fingerprintHigh) + Long.toHexString(fingerprintLow);
 		}
 
 		@Override
 		public boolean equals(Object other) {
-			return other instanceof Inline inline && inline.fingerprint == fingerprint;
+			return other instanceof Inline inline
+					&& inline.fingerprintHigh == fingerprintHigh
+					&& inline.fingerprintLow == fingerprintLow
+					&& inline.document.equals(document);
 		}
 
 		@Override
 		public int hashCode() {
-			return Long.hashCode(fingerprint);
+			return 31 * Long.hashCode(fingerprintHigh) + Long.hashCode(fingerprintLow);
 		}
 
 		@Override
 		public String toString() {
-			return "Inline[" + Long.toHexString(fingerprint) + "]";
+			return "Inline[" + fingerprintHex() + "]";
 		}
 	}
 
