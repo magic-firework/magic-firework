@@ -26,8 +26,10 @@ import com.magic.firework.registry.ModRegistries;
 import com.magic.firework.rocket.RocketSpec;
 import com.magic.firework.sim.FireworkSimulator;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -52,7 +54,12 @@ public final class FireworkCommand {
 	}
 
 	public static void init() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> register(dispatcher));
+	}
+
+	/** Build and register the tree; split out so parsing can be tested without Fabric. */
+	static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
+		return dispatcher.register(
 				Commands.literal("magicfirework")
 						.requires(source -> source.hasPermission(2))
 						.then(Commands.literal("test")
@@ -112,7 +119,7 @@ public final class FireworkCommand {
 						.then(Commands.literal("export")
 								.then(Commands.argument("name", StringArgumentType.word())
 										.executes(context -> export(context,
-												StringArgumentType.getString(context, "name")))))));
+												StringArgumentType.getString(context, "name"))))));
 	}
 
 	/** One running server per JVM, so the registry lookup is unambiguous. */
