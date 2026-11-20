@@ -35,7 +35,7 @@ public final class FireworkRuntime {
 	public void tick() {
 		ledger.reset();
 		scheduled.tick(server);
-		lights.tick(server);
+		lights.tick();
 	}
 
 	public void setDefinitions(Definitions next) {
