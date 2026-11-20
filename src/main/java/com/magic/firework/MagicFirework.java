@@ -9,6 +9,7 @@ import com.magic.firework.platform.ContentReloadListener;
 import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.registry.DefinitionReloadListener;
+import com.magic.firework.registry.ModParticles;
 import com.magic.firework.registry.ModRegistries;
 import com.magic.firework.recipe.ModRecipes;
 
@@ -35,6 +36,7 @@ public class MagicFirework implements ModInitializer {
 	public void onInitialize() {
 		// content: profiles and shows from data packs, plus the writable library
 		ModRegistries.init();
+		ModParticles.init();
 		ModRecipes.init();
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new DefinitionReloadListener());
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ContentReloadListener());
