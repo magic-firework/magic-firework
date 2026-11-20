@@ -47,12 +47,14 @@ public final class Evaluate {
 		List<Stamp> stamps = show.stamps();
 		int limit = Math.min(stamps.size(), ContentLimits.MAX_STAMPS);
 		int steps = 0;
+		boolean stepsTruncated = false;
 		for (int index = 0; index < limit; index++) {
 			Stamp stamp = stamps.get(index);
 			Seed stampSeed = seed.child(index);
 			int stepCount = stamp.duration() <= 0 ? 1 : stamp.duration();
 			for (int step = 0; step < stepCount; step++) {
 				if (meter.exhausted() || ++steps > ContentLimits.MAX_STEPS_PER_SHOW) {
+					stepsTruncated = true;
 					break;
 				}
 				double u = stepCount == 1 ? 0.0 : (step + 1) / (double) stepCount;
@@ -63,7 +65,7 @@ public final class Evaluate {
 			collectFlash(stamp, show, flashes);
 			collectEvents(stamp, meter, events);
 		}
-		return new Plan(FrameStream.of(points, flashes), events);
+		return new Plan(FrameStream.of(points, flashes), events, stepsTruncated || meter.truncated());
 	}
 
 	private static void emit(Stamp stamp, Transform pen, int tick, Seed pointSeed, Meter meter, Show show,

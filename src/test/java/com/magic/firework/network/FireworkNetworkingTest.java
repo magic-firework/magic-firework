@@ -47,6 +47,20 @@ class FireworkNetworkingTest {
 	}
 
 	@Test
+	void anEncodedCloudRoundTrips() {
+		FrameStream stream = FrameStream.of(List.of(
+				new FrameStream.Point(new com.magic.firework.core.Vec3(1.0, 2.0, 3.0), 4.0F, 0xFFFF0000, 1.0F)));
+		byte[] payload = FireworkNetworking.encodeCloud(new Vec3(10.0, 64.0, -10.0), stream, true);
+
+		FireworkNetworking.CloudPacket packet = FireworkNetworking.readCloud(
+				new FriendlyByteBuf(Unpooled.wrappedBuffer(payload)));
+
+		assertEquals(new Vec3(10.0, 64.0, -10.0), packet.origin());
+		assertEquals(1, packet.stream().size());
+		assertTrue(packet.flicker());
+	}
+
+	@Test
 	void aCloudWithoutFlickerStaysOff() {
 		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 

@@ -10,6 +10,7 @@ public final class Meter {
 	private final Budget budget;
 	private int points;
 	private int events;
+	private boolean truncated;
 
 	public Meter(Budget budget) {
 		this.budget = budget == null ? Budget.of(0) : budget;
@@ -19,6 +20,9 @@ public final class Meter {
 	public int takePoints(int requested) {
 		int remaining = budget.points() - points;
 		int granted = Math.min(Math.max(0, requested), Math.max(0, remaining));
+		if (requested > 0 && granted < requested) {
+			truncated = true;
+		}
 		points += granted;
 		return granted;
 	}
@@ -30,9 +34,15 @@ public final class Meter {
 
 	public boolean takeEvent() {
 		if (events >= budget.events()) {
+			truncated = true;
 			return false;
 		}
 		events++;
 		return true;
+	}
+
+	/** True when a request was partly or fully refused by the budget. */
+	public boolean truncated() {
+		return truncated;
 	}
 }

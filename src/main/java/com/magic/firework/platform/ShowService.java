@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 /**
  * The bridge from a firework's attribute bag to the show pipeline.
@@ -72,15 +73,26 @@ public final class ShowService {
 		double radius = FireworkLimits.maxShowDistance;
 		boolean cull = radius > 0.0;
 		double limit = radius * radius;
+		List<ServerPlayer> recipients = new ArrayList<>();
 		for (ServerPlayer player : level.players()) {
 			if (cull && player.distanceToSqr(origin) > limit) {
 				continue;
 			}
 			if (ServerPlayNetworking.canSend(player, FireworkNetworking.CLOUD_CHANNEL)) {
-				FireworkNetworking.sendCloud(player, origin, stream, flicker);
+				recipients.add(player);
 			}
 		}
+		broadcast(origin, stream, flicker, recipients, FireworkNetworking::sendCloud);
 		scheduled.schedule(level, origin, moved(plan.events(), adjust), level.getGameTime());
+	}
+
+	/** Encode the burst once, then hand the same payload to every recipient. */
+	static <T> void broadcast(Vec3 origin, FrameStream stream, boolean flicker, Iterable<T> recipients,
+			BiConsumer<T, byte[]> send) {
+		byte[] payload = FireworkNetworking.encodeCloud(origin, stream, flicker);
+		for (T recipient : recipients) {
+			send.accept(recipient, payload);
+		}
 	}
 
 	/** @return the per-burst geometry, or {@code null} when the burst uses the show as written */
@@ -118,6 +130,9 @@ public final class ShowService {
 			return cached;
 		}
 		Plan plan = Evaluate.evaluate(show, new Seed(show.seedSensitive() ? seed : 0L), Budget.of(points));
+		if (plan.truncated()) {
+			MagicFirework.LOGGER.warn("show {} was truncated at {} points", show.id(), points);
+		}
 		plans.put(show, seed, points, plan);
 		return plan;
 	}

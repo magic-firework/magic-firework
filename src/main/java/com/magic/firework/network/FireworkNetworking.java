@@ -11,6 +11,7 @@ import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.screen.FireworkEditorMenu;
 
+import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
@@ -123,10 +124,17 @@ public final class FireworkNetworking {
 	public record Profile(int entityId, long seed, int age, Vec3 velocity, AttributeBag bag) {
 	}
 
-	public static void sendCloud(ServerPlayer player, Vec3 origin, FrameStream stream, boolean flicker) {
+	/** Encode one burst into an immutable payload every recipient can share. */
+	public static byte[] encodeCloud(Vec3 origin, FrameStream stream, boolean flicker) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		writeCloud(buf, origin, stream, flicker);
-		ServerPlayNetworking.send(player, CLOUD_CHANNEL, buf);
+		byte[] payload = new byte[buf.readableBytes()];
+		buf.readBytes(payload);
+		return payload;
+	}
+
+	public static void sendCloud(ServerPlayer player, byte[] payload) {
+		ServerPlayNetworking.send(player, CLOUD_CHANNEL, new FriendlyByteBuf(Unpooled.wrappedBuffer(payload)));
 	}
 
 	/** The wire format of one burst, split out from the send so a test can round-trip it. */

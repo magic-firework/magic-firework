@@ -30,6 +30,9 @@ public final class ShowPlanCache {
 	}
 
 	public void put(Show show, long seed, int points, Plan plan) {
+		if (plan == null || plan.truncated()) {
+			return;
+		}
 		plans.put(key(show, seed, points), plan);
 	}
 
