@@ -48,7 +48,6 @@ public final class AttributeBag {
 		return tag instanceof CompoundTag compound ? of(compound) : EMPTY;
 	}
 
-
 	/**
 	 * Colour / id arrays accept both the NBT int-array form (saved data) and a JSON
 	 * list of numbers (data pack files), so a profile reads the same either way.

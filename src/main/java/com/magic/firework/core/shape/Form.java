@@ -47,8 +47,8 @@ public sealed interface Form {
 			if (granted <= 0) {
 				return;
 			}
-			ink.emit(new Ink.Emit(base, granted), (point, color, pointSize) ->
-					sink.point(transform.apply(point), color, pointSize * scale));
+			ink.emit(new Ink.Emit(base, granted),
+					(point, color, pointSize) -> sink.point(transform.apply(point), color, pointSize * scale));
 		}
 	}
 
@@ -110,7 +110,8 @@ public sealed interface Form {
 
 	/** {@code count} copies translated by {@code step} each. */
 	record Array(Form child, int count, Vec3 step, Transform place, int colorOffset, double size)
-			implements Form {
+			implements
+				Form {
 		public Array {
 			if (child == null) {
 				throw new IllegalArgumentException("array needs a child");
@@ -139,7 +140,8 @@ public sealed interface Form {
 
 	/** Reflections of one child across the selected local axes. */
 	record Mirror(Form child, boolean x, boolean y, boolean z, Transform place, int colorOffset, double size)
-			implements Form {
+			implements
+				Form {
 		public Mirror {
 			if (child == null) {
 				throw new IllegalArgumentException("mirror needs a child");

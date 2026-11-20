@@ -29,7 +29,8 @@ public final class Attributes {
 	 * firework and an aimed one run the same program; the world vector is resolved at launch.
 	 */
 	public static final Attr.FloatAttr DIRECTION_YAW = new Attr.FloatAttr("flight.direction.yaw", 0.0F, 0.0F, 360.0F);
-	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F, 360.0F);
+	public static final Attr.FloatAttr DIRECTION_PITCH = new Attr.FloatAttr("flight.direction.pitch", 0.0F, 0.0F,
+			360.0F);
 
 	/** Pure display: immune to damage, ignored by entity targeting. */
 	public static final Attr.BoolAttr DECORATIVE = new Attr.BoolAttr("decorative", true);

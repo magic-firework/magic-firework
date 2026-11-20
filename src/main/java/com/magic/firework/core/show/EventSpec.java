@@ -22,7 +22,6 @@ public record EventSpec(Kind kind, int tick, Id target, double a, double b) {
 	}
 
 	public enum Kind {
-		SOUND,
-		LIGHT
+		SOUND, LIGHT
 	}
 }

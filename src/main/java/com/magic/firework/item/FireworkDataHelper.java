@@ -13,8 +13,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+// @contract: the {@code MagicFirework} item tag layout; docs/spec.md §2.8 C8 owns the shape.
 /**
- * @contract: the {@code MagicFirework} item tag layout; docs/spec.md §2.8 C8 owns the shape.
  * <pre>
  * MagicFirework: {
  *   profile: "magic-firework:ring12",

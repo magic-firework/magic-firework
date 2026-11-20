@@ -36,7 +36,6 @@ public final class TagCodec {
 	private TagCodec() {
 	}
 
-
 	public static Ink parseInk(Id id, Tag json) throws CodecException {
 		CompoundTag object = object(json, "ink " + id);
 		List<Vec3> points = new ArrayList<>();
@@ -79,12 +78,11 @@ public final class TagCodec {
 		}
 	}
 
-
 	public static Show parseShow(Id id, Tag json, Function<Id, Ink> inks) throws CodecException {
 		CompoundTag object = object(json, "show " + id);
 		int[] palette = ints(object, "palette");
 		if (palette.length == 0) {
-			palette = new int[] { Show.DEFAULT_COLOR };
+			palette = new int[]{Show.DEFAULT_COLOR};
 		}
 		if (palette.length > ContentLimits.MAX_PALETTE) {
 			throw new CodecException("show " + id + " has more than " + ContentLimits.MAX_PALETTE + " palette entries");
@@ -94,7 +92,7 @@ public final class TagCodec {
 			throw new CodecException("show " + id + " has more than " + ContentLimits.MAX_STAMPS + " stamps");
 		}
 		List<Stamp> stamps = new ArrayList<>(array.size());
-		int[] nodes = { 0 };
+		int[] nodes = {0};
 		for (int i = 0; i < array.size(); i++) {
 			stamps.add(stamp(array.get(i), id, "stamps[" + i + "]", inks, nodes));
 		}
@@ -122,7 +120,8 @@ public final class TagCodec {
 		return new Spark(
 				object.get("speed") == null ? Spark.DEFAULT_SPEED : number(object.get("speed")),
 				object.get("speedSpread") == null ? Spark.DEFAULT_SPEED_SPREAD : number(object.get("speedSpread")),
-				object.get("directionSpread") == null ? Spark.DEFAULT_DIRECTION_SPREAD
+				object.get("directionSpread") == null
+						? Spark.DEFAULT_DIRECTION_SPREAD
 						: number(object.get("directionSpread")),
 				integer(object, "lifetime", Spark.DEFAULT_LIFETIME),
 				integer(object, "lifetimeSpread", Spark.DEFAULT_LIFETIME_SPREAD),
@@ -134,7 +133,6 @@ public final class TagCodec {
 				ints(object, "colors"),
 				ints(object, "fadeColors"));
 	}
-
 
 	private static Form form(Tag json, Id showId, String where, Function<Id, Ink> inks, int[] nodes, int depth)
 			throws CodecException {
@@ -203,7 +201,8 @@ public final class TagCodec {
 					}
 				}
 				if (!x && !y && !z) {
-					throw new CodecException("show " + showId + ": " + where + ".shape.axes must name at least one axis");
+					throw new CodecException(
+							"show " + showId + ": " + where + ".shape.axes must name at least one axis");
 				}
 				yield new Form.Mirror(
 						form(object.get("shape"), showId, where + ".shape", inks, nodes, depth + 1),
@@ -232,7 +231,8 @@ public final class TagCodec {
 		String type = string(object, "type", "none").toLowerCase(Locale.ROOT);
 		return switch (type) {
 			case "none" -> new Path.None();
-			case "line" -> new Path.Line(number(object.get("length"), "show " + showId + ": " + where + ".path.length"));
+			case "line" ->
+				new Path.Line(number(object.get("length"), "show " + showId + ": " + where + ".path.length"));
 			case "arc" -> new Path.Arc(
 					number(object.get("radius"), "show " + showId + ": " + where + ".path.radius"),
 					number(object.get("degrees"), "show " + showId + ": " + where + ".path.degrees"));
@@ -272,7 +272,6 @@ public final class TagCodec {
 		}
 		return events;
 	}
-
 
 	private static CompoundTag object(Tag tag, String what) throws CodecException {
 		if (!(tag instanceof CompoundTag compound)) {

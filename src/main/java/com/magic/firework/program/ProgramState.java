@@ -51,7 +51,6 @@ public final class ProgramState {
 		return state;
 	}
 
-
 	public boolean initialized() {
 		return initialized;
 	}
@@ -152,7 +151,6 @@ public final class ProgramState {
 		mixed ^= mixed >>> 33;
 		return mixed;
 	}
-
 
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();

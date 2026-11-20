@@ -1,6 +1,5 @@
 package com.magic.firework.core.shape;
 
-
 import com.magic.firework.core.Id;
 import com.magic.firework.core.Vec3;
 import com.magic.firework.core.path.Path;
@@ -43,7 +42,7 @@ public final class Ink {
 
 	/** One point brush: the atom of every figure. */
 	public static Ink dot(Id id, double size) {
-		return of(id, new Vec3[] { Vec3.ZERO }, new int[0], new double[] { size });
+		return of(id, new Vec3[]{Vec3.ZERO}, new int[0], new double[]{size});
 	}
 
 	/** Sample a pen path into a static ink (also used for inline {@code path} shapes). */

@@ -93,13 +93,16 @@ public final class Interpreter {
 				}
 			}
 			float volume = bag.has(Attributes.SOUND_VOLUME.key())
-					? Attributes.SOUND_VOLUME.get(bag) : sound.volume();
+					? Attributes.SOUND_VOLUME.get(bag)
+					: sound.volume();
 			float pitch = bag.has(Attributes.SOUND_PITCH.key())
-					? Attributes.SOUND_PITCH.get(bag) : sound.pitch();
+					? Attributes.SOUND_PITCH.get(bag)
+					: sound.pitch();
 			out.add(new Effect.PlaySound(id, volume, pitch));
 		} else if (op instanceof Op.Light light) {
 			int ticks = bag.has(Attributes.LIGHT_TICKS.key())
-					? Attributes.LIGHT_TICKS.get(bag) : light.ticks();
+					? Attributes.LIGHT_TICKS.get(bag)
+					: light.ticks();
 			out.add(new Effect.Light(ticks));
 		} else if (op instanceof Op.End) {
 			state.pop();

@@ -49,7 +49,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		super(ModRegistries.FIREWORK_CRAFTING_TABLE_BLOCK_ENTITY, pos, state);
 	}
 
-
 	@Override
 	protected void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
@@ -63,7 +62,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		ContainerHelper.loadAllItems(tag, this.items);
 	}
 
-
 	@Override
 	public Component getDisplayName() {
 		return Component.translatable("block.magic-firework.firework_crafting_table");
@@ -74,7 +72,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		return new FireworkEditorMenu(containerId, playerInventory, this);
 	}
 
-
 	public float effectiveSpeed(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
 		return resolved == null ? 0.0F : Attributes.SPEED.get(effective(resolved));
@@ -84,7 +81,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
 		return resolved == null ? 0 : Attributes.FLIGHT_TICKS.get(effective(resolved));
 	}
-
 
 	public float effectiveYaw(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
@@ -319,7 +315,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 			player.drop(stack, false);
 		}
 	}
-
 
 	@Override
 	public int getContainerSize() {

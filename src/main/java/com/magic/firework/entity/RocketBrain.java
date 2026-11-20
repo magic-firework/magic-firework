@@ -65,7 +65,6 @@ public final class RocketBrain {
 		return brain;
 	}
 
-
 	public boolean initialized() {
 		return state.initialized();
 	}
@@ -135,7 +134,6 @@ public final class RocketBrain {
 		return state.done() && doneTicks > Attributes.AFTERGLOW.get(bag());
 	}
 
-
 	/** @return the child this rocket's item carries at {@code index}, or {@code null} for an empty slot */
 	public RocketSpec child(int index) {
 		return index < 0 || index >= children.size() ? null : children.get(index);
@@ -177,7 +175,6 @@ public final class RocketBrain {
 	public long nextChildSeed() {
 		return state.nextChildSeed();
 	}
-
 
 	public void acceptClientView(AttributeBag base, long seed, int age) {
 		this.state = ProgramState.clientView(base, seed, age);

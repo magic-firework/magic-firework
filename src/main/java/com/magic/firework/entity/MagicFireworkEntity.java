@@ -113,7 +113,6 @@ public class MagicFireworkEntity extends Entity {
 	public record Launch(FireworkProfile profile, AttributeBag base, int depth) {
 	}
 
-
 	@Override
 	public void tick() {
 		super.tick();
@@ -196,7 +195,6 @@ public class MagicFireworkEntity extends Entity {
 		setXRot((float) (-Math.atan2(velocity.y, velocity.horizontalDistance()) * (180.0 / Math.PI)));
 	}
 
-
 	public long seed() {
 		return brain.seed();
 	}
@@ -244,7 +242,6 @@ public class MagicFireworkEntity extends Entity {
 			entity.setDeltaMovement(getDeltaMovement());
 		}
 	}
-
 
 	/** Client side: bind the synced attributes and velocity, then fly. */
 	public void acceptProfile(long seed, int age, Vec3 velocity, AttributeBag base) {
@@ -297,7 +294,6 @@ public class MagicFireworkEntity extends Entity {
 		}
 		brain = loaded;
 	}
-
 
 	@Override
 	public boolean isPickable() {

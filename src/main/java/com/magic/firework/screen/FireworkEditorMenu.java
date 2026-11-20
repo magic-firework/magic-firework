@@ -86,7 +86,6 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 		return center;
 	}
 
-
 	@Override
 	public void broadcastChanges() {
 		if (this.center instanceof FireworkCraftingTableBlockEntity table) {
@@ -118,7 +117,6 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 	public float displayedPitch() {
 		return this.editorData.get(DATA_PITCH) / 1000.0F;
 	}
-
 
 	/**
 	 * Shift-click routing. Each target range must be disjoint from the source slot: {@code moveItemStackTo}

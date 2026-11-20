@@ -38,7 +38,8 @@ public final class Frame {
 		if (program == null) {
 			return null;
 		}
-		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));	}
+		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));
+	}
 
 	public ResourceLocation programId() {
 		return programId;

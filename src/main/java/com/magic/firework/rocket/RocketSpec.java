@@ -49,7 +49,7 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	}
 
 	public CompoundTag save() {
-		return write(this, new int[] { FireworkLimits.maxNestingNodes });
+		return write(this, new int[]{FireworkLimits.maxNestingNodes});
 	}
 
 	/**
@@ -59,13 +59,12 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	 * @return the spec, or {@code null} when the tag is not a rocket at all
 	 */
 	public static RocketSpec load(Tag tag, ResourceLocation fallbackProfile) {
-		return read(tag, fallbackProfile, new int[] { FireworkLimits.maxNestingNodes });
+		return read(tag, fallbackProfile, new int[]{FireworkLimits.maxNestingNodes});
 	}
 
 	public static RocketSpec load(Tag tag) {
 		return load(tag, null);
 	}
-
 
 	private static CompoundTag write(RocketSpec spec, int[] nodes) {
 		CompoundTag tag = new CompoundTag();

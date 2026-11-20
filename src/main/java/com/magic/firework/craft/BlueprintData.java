@@ -5,8 +5,8 @@ import java.util.List;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 
+// @contract: the {@code MagicFireworkBlueprint} tag layout; docs/spec.md §2.8 C8 owns the shape.
 /**
- * @contract: the {@code MagicFireworkBlueprint} tag layout; docs/spec.md §2.8 C8 owns the shape.
  * <pre>
  * MagicFireworkBlueprint: {
  *   v: 1,
