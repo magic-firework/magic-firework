@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.magic.firework.client.particle.FireworkSparkParticle;
+import com.magic.firework.config.FireworkLimits;
+import com.magic.firework.core.PointBudget;
 import com.magic.firework.core.eval.FrameStream;
 import com.magic.firework.registry.ModParticles;
 
@@ -37,6 +39,9 @@ public final class CloudPlayer {
 	/** A misbehaving sender must not be able to queue unbounded clouds. */
 	private static final int MAX_PLAYING = 64;
 
+	/** One budget for every cloud playing this tick, not one per cloud. */
+	private static final PointBudget BUDGET = new PointBudget(FireworkLimits.maxClientPointsPerTick);
+
 	/** Ticks between the flashes of one flickering static puff. */
 	private static final float FLICKER_ECHO_DELAY = 8.0F;
 	/** How many extra flashes a flickering static puff gets after its first. */
@@ -63,6 +68,7 @@ public final class CloudPlayer {
 
 	public static void tick(Minecraft client) {
 		ClientLevel level = client.level;
+		BUDGET.beginTick();
 		if (level == null) {
 			PLAYING.clear();
 			return;
@@ -73,11 +79,16 @@ public final class CloudPlayer {
 		long now = level.getGameTime();
 		for (Iterator<Playing> iterator = PLAYING.iterator(); iterator.hasNext();) {
 			Playing playing = iterator.next();
-			playing.play(level, now);
+			playing.play(level, now, BUDGET);
 			if (playing.done()) {
 				iterator.remove();
 			}
 		}
+	}
+
+	/** @return particles dropped by the budget during the last client tick */
+	public static int droppedThisTick() {
+		return BUDGET.droppedThisTick();
 	}
 
 	public static void clear() {
@@ -108,17 +119,26 @@ public final class CloudPlayer {
 			this.startTick = startTick;
 		}
 
-		private void play(ClientLevel level, long now) {
+		private void play(ClientLevel level, long now, PointBudget budget) {
 			float elapsed = (float) (now - startTick);
 			// Echoes are queued in time order (the stream is), so one peek per tick is enough.
 			while (!echoes.isEmpty() && echoes.peekFirst().time() <= elapsed) {
-				emitStatic(level, echoes.pollFirst().point());
+				Echo echo = echoes.pollFirst();
+				if (budget.claim()) {
+					emitStatic(level, echo.point());
+				}
 			}
 			while (nextFlash < stream.flashCount() && stream.flash(nextFlash).time() <= elapsed) {
-				emitFlash(level, stream.flash(nextFlash++));
+				FrameStream.Flash flash = stream.flash(nextFlash++);
+				if (budget.claim()) {
+					emitFlash(level, flash);
+				}
 			}
 			while (next < stream.size() && stream.point(next).time() <= elapsed) {
 				FrameStream.Point point = stream.point(next++);
+				if (!budget.claim()) {
+					continue;
+				}
 				emit(level, point);
 				if (flicker && !point.hasMotion()) {
 					for (int i = 1; i <= FLICKER_ECHOES; i++) {

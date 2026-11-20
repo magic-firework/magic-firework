@@ -65,6 +65,8 @@ public final class FireworkLimits {
 	public static final int maxPointsPerShow = 2048;
 	/** Global cap of baked stroke points per server tick (all shows together). */
 	public static final int maxPointsPerTick = 8192;
+	/** Client-side cap of particle spawns per tick across all playing clouds. */
+	public static final int maxClientPointsPerTick = 4096;
 	/** Radius in blocks a burst is sent to; {@code <= 0} disables distance culling. */
 	public static final double maxShowDistance = 256.0;
 }
