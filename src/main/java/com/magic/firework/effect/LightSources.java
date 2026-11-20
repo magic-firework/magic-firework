@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.magic.firework.config.FireworkLimits;
 
@@ -65,7 +66,7 @@ public final class LightSources {
 	}
 
 	/** Test seam: startup cleanup only needs surfaces for the recorded dimensions. */
-	int recover(LightLedger source, java.util.function.Function<ResourceKey<Level>, LightSurface> levels) {
+	int recover(LightLedger source, Function<ResourceKey<Level>, LightSurface> levels) {
 		if (source == null) {
 			return 0;
 		}
