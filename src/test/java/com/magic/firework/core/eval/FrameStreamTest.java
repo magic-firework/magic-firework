@@ -81,4 +81,14 @@ class FrameStreamTest {
 		assertEquals(4.0F, stream.flash(1).time(), TOLERANCE);
 		assertTrue(stream.isTimeOrdered());
 	}
+
+	@Test
+	void theBakedStreamIsNeverMutated() {
+		FrameStream baked = twoPoints();
+		baked.transformed(Transform.rotation(0.0, Math.PI / 2.0, 0.0, 3.0), 0xFFFFFF);
+
+		assertEquals(1.0, baked.point(0).offset().x, 1.0E-9);
+		assertEquals(0xFF0000, baked.point(0).argb());
+		assertEquals(1.0F, baked.point(0).size(), TOLERANCE);
+	}
 }
