@@ -68,23 +68,20 @@ public class MagicFireworkEntity extends Entity {
 	public static MagicFireworkEntity launch(FireworkRuntime runtime, ServerLevel level, Vec3 position,
 			Vec3 lookDirection,
 			RocketSpec spec, Entity owner, MagicFireworkEntity parent) {
-		if (runtime == null || spec == null || !runtime.ledger().trySpawn()) {
+		if (runtime == null || !runtime.ledger().trySpawn()) {
 			return null;
 		}
-		FireworkProfile profile = runtime.definitions().get(spec.profileId());
-		if (profile == null) {
-			return null;
-		}
-		AttributeBag base = profile.defaults().overlay(spec.overlay());
 		int depth = parent == null ? 0 : parent.depth() + 1;
-		if (parent != null && depth > FireworkLimits.maxDepth) {
+		Launch plan = resolveLaunch(runtime, spec, depth);
+		if (plan == null) {
 			return null;
 		}
 		long seed = parent == null ? level.random.nextLong() : parent.brain.nextChildSeed();
 
 		MagicFireworkEntity rocket = new MagicFireworkEntity(ModRegistries.MAGIC_FIREWORK_ENTITY, level);
 		rocket.runtime = runtime;
-		rocket.brain = RocketBrain.launch(spec, profile.program(), base, seed, depth, lookDirection);
+		rocket.brain = RocketBrain.launch(spec, plan.profile().program(), plan.base(), seed, plan.depth(),
+				lookDirection);
 		rocket.setPos(position);
 		if (owner != null) {
 			rocket.ownerUuid = owner.getUUID();
@@ -92,11 +89,34 @@ public class MagicFireworkEntity extends Entity {
 
 		level.addFreshEntity(rocket);
 
-		if (base.has(Attributes.LAUNCH_SOUND)) {
-			Sounds.play(level, position, ResourceLocation.tryParse(base.raw().getString(Attributes.LAUNCH_SOUND)),
-					3.0F, 1.0F);
+		if (plan.base().has(Attributes.LAUNCH_SOUND)) {
+			Sounds.play(level, position,
+					ResourceLocation.tryParse(plan.base().raw().getString(Attributes.LAUNCH_SOUND)), 3.0F, 1.0F);
 		}
 		return rocket;
+	}
+
+	/**
+	 * The part of a launch that does not touch the world: which profile runs, the resolved
+	 * attribute base and the generation depth. A pure seam so a launch can be validated without
+	 * a server; {@link #launch} only appends entity creation and the effects.
+	 *
+	 * @param depth 0 for a root launch, {@code parent.depth() + 1} for a split
+	 * @return the plan, or {@code null} when the profile is missing or the depth is over the limit
+	 */
+	public static Launch resolveLaunch(FireworkRuntime runtime, RocketSpec spec, int depth) {
+		if (runtime == null || spec == null || depth < 0 || depth > FireworkLimits.maxDepth) {
+			return null;
+		}
+		FireworkProfile profile = runtime.definitions().get(spec.profileId());
+		if (profile == null) {
+			return null;
+		}
+		return new Launch(profile, profile.defaults().overlay(spec.overlay()), depth);
+	}
+
+	/** A validated launch: the profile to run, its resolved defaults and the generation depth. */
+	public record Launch(FireworkProfile profile, AttributeBag base, int depth) {
 	}
 
 	// ── ticking ──────────────────────────────────────────────────────────────
