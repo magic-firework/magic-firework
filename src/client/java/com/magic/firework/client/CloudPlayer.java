@@ -1,8 +1,6 @@
 package com.magic.firework.client;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
@@ -41,11 +39,6 @@ public final class CloudPlayer {
 
 	/** One budget for every cloud playing this tick, not one per cloud. */
 	private static final PointBudget BUDGET = new PointBudget(FireworkLimits.maxClientPointsPerTick);
-
-	/** Ticks between the flashes of one flickering static puff. */
-	private static final float FLICKER_ECHO_DELAY = 8.0F;
-	/** How many extra flashes a flickering static puff gets after its first. */
-	private static final int FLICKER_ECHOES = 2;
 
 	private static final List<Playing> PLAYING = new ArrayList<>();
 
@@ -99,57 +92,26 @@ public final class CloudPlayer {
 		return PLAYING.size();
 	}
 
-	/** A spark that is due again later: a flickering static puff's repeat flash. */
-	private record Echo(float time, FrameStream.Point point) {
-	}
-
 	private static final class Playing {
 		private final Vec3 origin;
-		private final FrameStream stream;
 		private final boolean flicker;
-		private final Deque<Echo> echoes = new ArrayDeque<>();
-		private final long startTick;
-		private int next;
-		private int nextFlash;
+		private final CloudCursor cursor;
 
 		private Playing(Vec3 origin, FrameStream stream, boolean flicker, long startTick) {
 			this.origin = origin;
-			this.stream = stream;
 			this.flicker = flicker;
-			this.startTick = startTick;
+			this.cursor = new CloudCursor(stream, flicker, startTick);
 		}
 
 		private void play(ClientLevel level, long now, PointBudget budget) {
-			float elapsed = (float) (now - startTick);
-			// Echoes are queued in time order (the stream is), so one peek per tick is enough.
-			while (!echoes.isEmpty() && echoes.peekFirst().time() <= elapsed) {
-				Echo echo = echoes.pollFirst();
-				if (budget.claim()) {
-					emitStatic(level, echo.point());
-				}
-			}
-			while (nextFlash < stream.flashCount() && stream.flash(nextFlash).time() <= elapsed) {
-				FrameStream.Flash flash = stream.flash(nextFlash++);
-				if (budget.claim()) {
-					emitFlash(flash);
-				}
-			}
-			while (next < stream.size() && stream.point(next).time() <= elapsed) {
-				FrameStream.Point point = stream.point(next++);
-				if (!budget.claim()) {
-					continue;
-				}
-				emit(level, point);
-				if (flicker && !point.hasMotion()) {
-					for (int i = 1; i <= FLICKER_ECHOES; i++) {
-						echoes.addLast(new Echo(point.time() + i * FLICKER_ECHO_DELAY, point));
-					}
-				}
-			}
+			cursor.advance(now, budget,
+					point -> emitStatic(level, point),
+					this::emitFlash,
+					point -> emit(level, point));
 		}
 
 		private boolean done() {
-			return next >= stream.size() && nextFlash >= stream.flashCount() && echoes.isEmpty();
+			return cursor.done();
 		}
 
 		private void emit(ClientLevel level, FrameStream.Point point) {
