@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/show.schema.json",
+  "palette": [
+    16777215
+  ],
+  "stamps": [
+    {
+      "shape": "magic-firework:vanilla_large_ball",
+      "at": 0,
+      "spark": {
+        "speed": 0.5,
+        "speedSpread": 0.05,
+        "directionSpread": 0.5,
+        "lifetime": 48,
+        "lifetimeSpread": 12,
+        "trail": false,
+        "flicker": false,
+        "flash": true,
+        "normalize": true,
+        "atOrigin": true,
+        "colors": [
+          0
+        ]
+      },
+      "events": [
+        {
+          "kind": "sound",
+          "at": 0,
+          "id": "minecraft:entity.firework_rocket.large_blast",
+          "volume": 8.0,
+          "pitch": 1.0
+        }
+      ]
+    }
+  ]
+}
