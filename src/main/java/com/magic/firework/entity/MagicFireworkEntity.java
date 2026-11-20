@@ -139,7 +139,7 @@ public class MagicFireworkEntity extends Entity {
 		this.move(MoverType.SELF, getDeltaMovement());
 		brain.setCollided(horizontalCollision || verticalCollision);
 		orient();
-		tickPendingChildren(level, runtime);
+		tickPendingChildren(level);
 
 		if (!profileSynced) {
 			// Sent after the first tick so the packet carries the velocity the launch op set;
@@ -161,7 +161,7 @@ public class MagicFireworkEntity extends Entity {
 				AttributeBag bag = brain.bag();
 				runtime.shows().burst(level, position(), bag, brain.seed(), Attributes.FLICKER.get(bag));
 			} else if (effect instanceof Effect.SpawnChild child) {
-				scheduleChild(level, runtime, child);
+				scheduleChild(level, child);
 			} else if (effect instanceof Effect.PlaySound sound) {
 				Sounds.play(level, position(), sound.id(), sound.volume(), sound.pitch());
 			} else if (effect instanceof Effect.Light light) {
@@ -199,7 +199,7 @@ public class MagicFireworkEntity extends Entity {
 	 * A slot the item does not fill spawns nothing, which is how a program can offer more slots
 	 * than a given rocket was built with.
 	 */
-	private void scheduleChild(ServerLevel level, FireworkRuntime runtime, Effect.SpawnChild effect) {
+	private void scheduleChild(ServerLevel level, Effect.SpawnChild effect) {
 		RocketSpec target = effect.target().isSlot()
 				? brain.child(effect.target().childIndex())
 				: RocketSpec.of(effect.target().profile());
@@ -208,17 +208,17 @@ public class MagicFireworkEntity extends Entity {
 		}
 		RocketBrain.Child immediate = brain.scheduleChild(target, effect.delayTicks());
 		if (immediate != null) {
-			spawnChildNow(level, runtime, immediate);
+			spawnChildNow(level, immediate);
 		}
 	}
 
-	private void tickPendingChildren(ServerLevel level, FireworkRuntime runtime) {
+	private void tickPendingChildren(ServerLevel level) {
 		for (RocketBrain.Child child : brain.dueChildren()) {
-			spawnChildNow(level, runtime, child);
+			spawnChildNow(level, child);
 		}
 	}
 
-	private void spawnChildNow(ServerLevel level, FireworkRuntime runtime, RocketBrain.Child child) {
+	private void spawnChildNow(ServerLevel level, RocketBrain.Child child) {
 		// Deliberately no direction override: a split child flies the way its own
 		// profile (flight.direction.*) and its own launch op say. Injecting a vector
 		// here would win over both, because launch lets attributes override the op.

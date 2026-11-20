@@ -131,7 +131,7 @@ public final class CloudPlayer {
 			while (nextFlash < stream.flashCount() && stream.flash(nextFlash).time() <= elapsed) {
 				FrameStream.Flash flash = stream.flash(nextFlash++);
 				if (budget.claim()) {
-					emitFlash(level, flash);
+					emitFlash(flash);
 				}
 			}
 			while (next < stream.size() && stream.point(next).time() <= elapsed) {
@@ -191,7 +191,7 @@ public final class CloudPlayer {
 			}
 		}
 
-		private void emitFlash(ClientLevel level, FrameStream.Flash flash) {
+		private void emitFlash(FrameStream.Flash flash) {
 			Particle particle = Minecraft.getInstance().particleEngine.createParticle(ParticleTypes.FLASH,
 					origin.x + flash.offset().x, origin.y + flash.offset().y, origin.z + flash.offset().z,
 					0.0, 0.0, 0.0);
