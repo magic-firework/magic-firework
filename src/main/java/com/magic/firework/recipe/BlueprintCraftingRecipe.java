@@ -37,6 +37,8 @@ public final class BlueprintCraftingRecipe extends CustomRecipe {
 	@Override
 	public boolean matches(CraftingContainer grid, Level level) {
 		int blueprintSlot = -1;
+		int blueprints = 0;
+		int written = 0;
 		Map<String, Integer> provided = new LinkedHashMap<>();
 		for (int i = 0; i < grid.getContainerSize(); i++) {
 			ItemStack stack = grid.getItem(i);
@@ -44,25 +46,21 @@ public final class BlueprintCraftingRecipe extends CustomRecipe {
 				continue;
 			}
 			if (stack.is(ModRegistries.FIREWORK_BLUEPRINT_ITEM)) {
-				if (blueprintSlot >= 0 || !BlueprintDataHelper.isWritten(stack)) {
-					return false;
+				blueprints++;
+				if (BlueprintDataHelper.isWritten(stack)) {
+					written++;
+					blueprintSlot = i;
 				}
-				blueprintSlot = i;
 			} else {
 				ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
 				provided.merge(id.toString(), stack.getCount(), Integer::sum);
 			}
 		}
-		if (blueprintSlot < 0) {
+		if (blueprints != 1 || written != 1 || blueprintSlot < 0) {
 			return false;
 		}
 		List<Cost> bill = BlueprintDataHelper.cost(grid.getItem(blueprintSlot));
-		if (bill.isEmpty()) {
-			return false;
-		}
-		int providedTotal = provided.values().stream().mapToInt(Integer::intValue).sum();
-		int requiredTotal = bill.stream().mapToInt(Cost::count).sum();
-		return providedTotal == requiredTotal && BlueprintCrafting.canPay(bill, provided);
+		return BlueprintCrafting.matchesBill(bill, blueprints, written, provided);
 	}
 
 	@Override

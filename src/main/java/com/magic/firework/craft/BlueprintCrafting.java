@@ -12,6 +12,29 @@ public final class BlueprintCrafting {
 	private BlueprintCrafting() {
 	}
 
+	/**
+	 * The grid contract shared with the crafting recipe: exactly one written blueprint, and a
+	 * payment that matches the frozen bill both in total and per ingredient. Written as a pure
+	 * count check so it can be tested without a live item registry.
+	 *
+	 * @param blueprints     how many blueprint items the grid contains
+	 * @param written        how many of those are written
+	 * @param provided       every non-blueprint ingredient, by item id
+	 * @return whether the blueprint may be redeemed for its firework
+	 */
+	public static boolean matchesBill(List<Cost> bill, int blueprints, int written,
+			Map<String, Integer> provided) {
+		if (bill == null || bill.isEmpty() || provided == null) {
+			return false;
+		}
+		if (blueprints != 1 || written != 1) {
+			return false;
+		}
+		int providedTotal = provided.values().stream().mapToInt(Integer::intValue).sum();
+		int requiredTotal = bill.stream().mapToInt(Cost::count).sum();
+		return providedTotal == requiredTotal && canPay(bill, provided);
+	}
+
 	public static boolean canPay(List<Cost> bill, Map<String, Integer> available) {
 		if (bill == null || bill.isEmpty() || available == null) {
 			return false;
