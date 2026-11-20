@@ -24,8 +24,6 @@ public final class CloudProtocol {
 	private static final float VELOCITY_QUANT = 4096.0F;
 	private static final int FLAG_TRAIL = 1;
 	private static final int FLAG_FLICKER = 2;
-	/** Hard cap on one cloud: a show can never bake more points than this. */
-	private static final int MAX_POINTS = FireworkLimits.maxPointsPerShow;
 	/** Hard cap on flashes: at most one per stamp, and a show has at most MAX_STAMPS stamps. */
 	private static final int MAX_FLASHES = ContentLimits.MAX_STAMPS;
 
@@ -59,7 +57,7 @@ public final class CloudProtocol {
 	}
 
 	public static FrameStream read(FriendlyByteBuf buf) {
-		int count = readCount(buf, MAX_POINTS, "point");
+		int count = readCount(buf, FireworkLimits.maxPointsPerShow, "point");
 		List<FrameStream.Point> points = new ArrayList<>(count);
 		for (int i = 0; i < count; i++) {
 			double x = buf.readShort() / (double) QUANT;

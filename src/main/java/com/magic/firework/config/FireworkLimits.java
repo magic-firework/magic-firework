@@ -1,19 +1,22 @@
 package com.magic.firework.config;
 
-/** Hard safety limits. Immutable: change them here and rebuild, or wrap them in a config later. */
+/**
+ * Safety limits. The configurable fields are defaults; {@link FireworkConfig} may replace them
+ * once at startup. Treat them as read-only after that.
+ */
 public final class FireworkLimits {
 	private FireworkLimits() {
 	}
 
 	/** Hardest cap on the nesting depth below a rocket, whatever the content asks for. */
-	public static final int maxDepth = 3;
+	public static int maxDepth = 3;
 	/**
 	 * Children a single rocket may create over its whole life.
 	 *
 	 * <p>Kept below {@link #maxNestingNodes} on purpose: a budget of its own, so a split show can
 	 * never spend the whole item tree in one generation.
 	 */
-	public static final int maxChildren = 32;
+	public static int maxChildren = 32;
 	/**
 	 * Ceiling of the {@code count} a single {@code spawn} op may ask for; anything past the
 	 * runtime budget is simply never reached.
@@ -26,7 +29,7 @@ public final class FireworkLimits {
 	 * that is already clamped to this number; the brake only ever makes it smaller. The cap is the
 	 * backstop that keeps a forged or future velocity from teleporting it across the world.
 	 */
-	public static final double maxSpeed = 4.0;
+	public static double maxSpeed = 4.0;
 	/**
 	 * Per-tick brake along the flight line: the vanilla gravity value, so a rocket slows down at
 	 * the rate a falling entity speeds up.
@@ -62,11 +65,11 @@ public final class FireworkLimits {
 	/** Hard cap on pending scheduled effects across every dimension. */
 	public static final int maxPendingEffects = 1024;
 	/** Whether the {@code light} op may place light blocks in the world. */
-	public static final boolean allowLightBlocks = true;
+	public static boolean allowLightBlocks = true;
 	/** Upper bound of points a single baked stroke show may emit. */
-	public static final int maxPointsPerShow = 2048;
+	public static int maxPointsPerShow = 2048;
 	/** Global cap of baked stroke points per server tick (all shows together). */
-	public static final int maxPointsPerTick = 8192;
+	public static int maxPointsPerTick = 8192;
 	/** Client-side cap of particle spawns per tick across all playing clouds. */
 	public static final int maxClientPointsPerTick = 4096;
 	/** Radius in blocks a burst is sent to; {@code <= 0} disables distance culling. */
