@@ -14,7 +14,7 @@
 | 批次 | 状态 | 提交 | 验证 |
 |---|---|---|---|
 | B0 | 完成 | `34e2170` `b505a94` `f17097b` `b5671bb` `b4fb2b0` | 3 个功能提交各自 `./gradlew test` 通过；读侧上限与校验同提交 |
-| B1 | 完成（ENG-04 运行期断言留 B3；ENG-02 决策用纯接缝测试，ItemStack 网格走查留运行期） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` `e619db2` `54cbc31` | 6 个提交各自 `./gradlew test` 通过 |
+| B1 | 完成（ENG-04 运行期断言留 B3；ENG-02 决策用纯接缝测试，ItemStack 网格走查留运行期） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` `e619db2` `54cbc31` | 前 5 个提交各自 `./gradlew test` 通过；`54cbc31` 新增纯接缝测试，最终树 `check` 通过 |
 | B2 | 完成 | `cc32bf7` `77dd3e7` | `SchemaParityTest` + 共享夹具 + `check_docs.py`；Python 32/32、3 个坏夹具被拒、边界夹具通过 |
 | B3 | 部分（门禁/可复现完成；运行期冒烟未完成） | `abb4376` `61b1afe` `217be80` `77874d9` `d150e66` | Spotless/ErrorProne/JaCoCo/锁定/校验/版本已落；干净 clone 的 `build --offline` 通过 |
 | B4 | 完成（ENG-10 的 recipe 例外；覆盖率达标） | `61ff4f4` `a8de33b` `99a9df3` `a65eb67` `161d545` `59063ad` `127122b` `2a44360` `05f297d` `39206f6` | 7/7 项完成；`check` 通过；覆盖率 50.5% |
