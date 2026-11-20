@@ -97,6 +97,7 @@ public final class Evaluate {
 	}
 
 	/** Bake one point as a vanilla spark: position at the burst origin, velocity along the point. */
+	@SuppressWarnings("IdentityBinaryExpression") // the three nextDouble() pairs are independent draws
 	private static FrameStream.Point spark(Spark spark, Rng random, Transform pen, int tick,
 			Vec3 point, int colorIndex, double pointSize, Show show) {
 		Vec3 direction = point;
@@ -124,16 +125,15 @@ public final class Evaluate {
 		}
 		int lifetime = spark.lifetime()
 				+ (spark.lifetimeSpread() > 0 ? random.nextInt(spark.lifetimeSpread()) : 0);
-		int color = choose(spark.colors(), colorIndex, random);
-		int fade = spark.fadeColors().length == 0 ? 0
-				: show.color(choose(spark.fadeColors(), 0, random));
+		int color = spark.colorCount() == 0
+				? colorIndex
+				: spark.colorAt(random.nextInt(spark.colorCount()));
+		int fade = spark.fadeColorCount() == 0
+				? 0
+				: show.color(spark.fadeColorAt(random.nextInt(spark.fadeColorCount())));
 		Vec3 offset = spark.atOrigin() ? pen.position() : pen.apply(point);
 		return new FrameStream.Point(offset, tick, show.color(color), (float) pointSize,
 				pen.rotate(velocity), lifetime, fade, spark.trail(), spark.flicker());
-	}
-
-	private static int choose(int[] choices, int fallback, Rng random) {
-		return choices.length == 0 ? fallback : choices[random.nextInt(choices.length)];
 	}
 
 	/** One flash per flashing stamp, at the tick the stamp starts and at its origin. */
@@ -143,7 +143,7 @@ public final class Evaluate {
 			return;
 		}
 		Transform pen = stamp.place().compose(Transform.translation(stamp.path().at(0.0)));
-		int color = spark.colors().length == 0 ? 0 : spark.colors()[0];
+		int color = spark.colorCount() == 0 ? 0 : spark.colorAt(0);
 		flashes.add(new FrameStream.Flash(pen.position(), stamp.at(), show.color(color)));
 	}
 

@@ -13,6 +13,7 @@ package com.magic.firework.core.show;
  * while a shape keeps the point's own length so the outline survives (vanilla
  * {@code createParticleShape}).
  */
+@SuppressWarnings("ArrayRecordComponent") // arrays are cloned in the compact constructor and in the accessors
 public record Spark(
 		double speed,
 		double speedSpread,
@@ -50,6 +51,33 @@ public record Spark(
 		return new Spark(DEFAULT_SPEED, DEFAULT_SPEED_SPREAD, DEFAULT_DIRECTION_SPREAD,
 				DEFAULT_LIFETIME, DEFAULT_LIFETIME_SPREAD, false, false, true, true, true,
 				new int[0], new int[0]);
+	}
+
+	/** Fast path for the bake loop; the public accessors still return a defensive copy. */
+	public int colorCount() {
+		return colors.length;
+	}
+
+	public int colorAt(int index) {
+		return colors[index];
+	}
+
+	public int fadeColorCount() {
+		return fadeColors.length;
+	}
+
+	public int fadeColorAt(int index) {
+		return fadeColors[index];
+	}
+
+	@Override
+	public int[] colors() {
+		return colors.clone();
+	}
+
+	@Override
+	public int[] fadeColors() {
+		return fadeColors.clone();
 	}
 
 	/** True when two baked plans of this spark would differ for different burst seeds. */

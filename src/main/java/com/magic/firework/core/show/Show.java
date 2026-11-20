@@ -8,6 +8,7 @@ import com.magic.firework.core.Id;
  * A drawing: a palette plus a flat list of stamps. No tree, no motion, no per-node children:
  * everything the client sees is a stamped point cloud with a tick offset.
  */
+@SuppressWarnings("ArrayRecordComponent") // cloned in the compact constructor and in palette()
 public record Show(Id id, int[] palette, List<Stamp> stamps) {
 	public static final int DEFAULT_COLOR = 0xFFFFFF;
 
@@ -15,8 +16,13 @@ public record Show(Id id, int[] palette, List<Stamp> stamps) {
 		if (id == null) {
 			throw new IllegalArgumentException("show needs an id");
 		}
-		palette = palette == null || palette.length == 0 ? new int[] { DEFAULT_COLOR } : palette.clone();
+		palette = palette == null || palette.length == 0 ? new int[]{DEFAULT_COLOR} : palette.clone();
 		stamps = stamps == null ? List.of() : List.copyOf(stamps);
+	}
+
+	@Override
+	public int[] palette() {
+		return palette.clone();
 	}
 
 	public int paletteSize() {
