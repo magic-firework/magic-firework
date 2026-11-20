@@ -24,11 +24,9 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
- * The bridge from a firework's attribute bag to the show pipeline.
- *
- * <p>One instance per runtime: it owns the plan cache, the tick ledger and the scheduled
- * effects it feeds. A burst resolves the show, bakes it at most once per budget, sends it to
- * nearby players and schedules the non-visual events.
+ * The bridge from a firework's attribute bag to the show pipeline. One instance per runtime: it owns
+ * the plan cache, the tick ledger and the scheduled effects it feeds. A burst resolves the show, bakes
+ * it at most once per budget, sends it to nearby players and schedules the non-visual events.
  */
 public final class ShowService {
 	private final ContentService content;

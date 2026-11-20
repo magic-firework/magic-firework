@@ -13,14 +13,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
- * The one deliberately global reference: the runtime of the server that is currently running.
- *
- * <p>Minecraft exposes no "current server" accessor to a resource-reload listener, and a JVM
- * runs at most one server at a time, so this is the seam. Everything else that used to be
- * static now hangs off {@link FireworkRuntime}.
- *
- * <p>Reloads may run before {@code SERVER_STARTING} on some launch paths, so they land in a
- * pending snapshot that the first runtime adopts.
+ * The one deliberately global reference: the runtime of the server that is currently running. Minecraft
+ * exposes no "current server" accessor to a resource-reload listener and a JVM runs at most one server,
+ * so this is the seam; everything else that used to be static hangs off {@link FireworkRuntime}.
+ * Reloads may run before {@code SERVER_STARTING}, so they land in a snapshot the first runtime adopts.
  */
 public final class RuntimeRegistry {
 	private static final Map<MinecraftServer, FireworkRuntime> RUNNING = new ConcurrentHashMap<>();

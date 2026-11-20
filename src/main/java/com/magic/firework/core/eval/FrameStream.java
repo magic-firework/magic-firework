@@ -8,11 +8,9 @@ import com.magic.firework.core.Transform;
 import com.magic.firework.core.Vec3;
 
 /**
- * The baked result of a pure show: offsets from the burst origin plus a per-point time.
- *
- * <p>Points are ordered by time so a player can walk the stream with a single cursor. A point
- * with a lifetime is a vanilla firework spark: the client spawns it once and lets the vanilla
- * particle physics do the rest. A point with no lifetime is the old static puff and is simply
+ * The baked result of a pure show: offsets from the burst origin plus a per-point time, ordered so a
+ * player can walk the stream with a single cursor. A point with a lifetime is a vanilla firework
+ * spark the client spawns once and lets vanilla physics carry; a point without one is a static puff
  * emitted at its baked position.
  */
 public final class FrameStream {
@@ -88,10 +86,9 @@ public final class FrameStream {
 
 	/**
 	 * One baked particle: offset in blocks, tick offset, ARGB colour, size multiplier.
-	 *
-	 * <p>{@code lifetime <= 0} means a static puff. When it is positive the point is a spark and
-	 * the client replays it with a vanilla firework particle, using {@code velocity} as the
-	 * initial motion and {@code fadeArgb} (alpha 0 = none) as the colour it fades toward.
+	 * {@code lifetime <= 0} means a static puff; when positive the point is a spark replayed with a
+	 * vanilla firework particle, {@code velocity} as its initial motion and {@code fadeArgb} (alpha 0 =
+	 * none) as the colour it fades toward.
 	 */
 	public record Point(Vec3 offset, float time, int argb, float size, Vec3 velocity,
 			float lifetime, int fadeArgb, boolean trail, boolean flicker) {
@@ -121,12 +118,8 @@ public final class FrameStream {
 	}
 
 	/**
-	 * Apply a per-burst adjustment to an already baked stream.
-	 *
-	 * <p>A show is baked once and shared by every burst that uses it, so whatever differs per
-	 * rocket (colour, scale, rotation) is applied here instead of inside the bake. Time is
-	 * untouched, so the stream stays ordered and the cached plan is never mutated.
-	 *
+	 * Apply a per-burst adjustment to an already baked stream. A show is baked once and shared, so
+	 * colour, scale and rotation are applied here, leaving time and the cached plan untouched.
 	 * @param transform rotation and scale around the burst origin, or {@code null} to keep the geometry
 	 * @param argb      colour override for every point, or {@code null} to keep the show's palette
 	 */

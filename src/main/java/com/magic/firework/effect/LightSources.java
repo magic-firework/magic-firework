@@ -16,15 +16,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
 /**
- * Dynamic light for the {@code light} op: places a vanilla light block for N ticks and
- * removes it again. Only ever touches air, so it cannot destroy terrain.
- *
- * <p>One instance per runtime: the placed-block map is no longer a static that survives a
- * world switch. A {@link LightLedger} mirrors every placement into the world save, so a crash
- * is cleaned up on the next start; {@link #clear()} runs when the runtime closes.
- *
- * <p>Placements are keyed by dimension and go through {@link LightSurface}, so the placement,
- * expiry and unload rules can be tested without a live level.
+ * Dynamic light for the {@code light} op: places a vanilla light block for N ticks and removes it again,
+ * touching only air so it cannot destroy terrain. One instance per runtime, keyed by dimension: the
+ * placed-block map is no longer a static that survives a world switch. A {@link LightLedger} mirrors
+ * every placement into the world save, and {@link #clear()} runs when the runtime closes.
  */
 public final class LightSources {
 	private final Map<ResourceKey<Level>, LightSurface> surfaces = new LinkedHashMap<>();

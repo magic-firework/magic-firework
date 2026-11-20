@@ -15,12 +15,10 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 
 /**
- * Keeps the JSON Schemas and the shipped content in step.
- *
- * <p>This is the cheap half of the contract: every data file must name the schema for its
- * directory, and every schema must be a well-formed JSON document with an {@code $id} so
- * relative {@code $ref}s resolve. Full instance validation lives in
- * {@code tools/validate_content.py} because it needs a JSON Schema implementation.
+ * Keeps the JSON Schemas and the shipped content in step. This is the cheap half of the contract: every
+ * data file must name the schema for its directory, and every schema must be well-formed with an
+ * {@code $id} so relative {@code $ref}s resolve. Full instance validation lives in
+ * {@code tools/validate_content.py}, because it needs a JSON Schema implementation.
  */
 class ContentSchemaTest {
 	private static final Path DATA = Path.of("src/main/resources/data");

@@ -8,12 +8,10 @@ import com.magic.firework.registry.Definitions;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Everything that used to be a static field, scoped to one running server.
- *
- * <p>Content, definitions, tick counters, scheduled effects, temporary lights and the plan
- * cache live here. A reload swaps the immutable snapshots; a server stop closes the runtime,
- * which is also what finally drops the {@code ServerLevel} references held by lights and
- * pending sounds.
+ * Everything that used to be a static field, scoped to one running server: content, definitions, tick
+ * counters, scheduled effects, temporary lights and the plan cache. A reload swaps the immutable
+ * snapshots; a server stop closes the runtime, which is also what finally drops the {@code ServerLevel}
+ * references held by lights and pending sounds.
  */
 public final class FireworkRuntime {
 	private final MinecraftServer server;

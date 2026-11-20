@@ -15,19 +15,10 @@ import com.magic.firework.core.show.Spark;
 import com.magic.firework.core.show.Stamp;
 
 /**
- * Turns a {@link Show} into a {@link Plan} with one loop.
- *
- * <p>A stamp either bursts once or walks its path over {@code duration} ticks; each emitted
- * point is transformed by {@code place * path(u)}. Form trees are flattened lazily under the
- * {@link Meter}, so repetition is bounded by the budget rather than by the author.
- *
- * <p>A stamp with a {@link Spark} bakes vanilla firework particles instead of static puffs:
- * every point gets an initial velocity, a lifetime, an optional fade colour and the trail /
- * flicker flags. The client then lets the real vanilla particle tick, so the show does not
- * have to bake every position of every spark.
- *
- * <p>Deterministic by construction: the same {@code (show, seed, budget)} gives the same
- * plan, byte for byte, because every random stream is derived from an explicit seed path.
+ * Turns a {@link Show} into a {@link Plan} with one loop: a stamp either bursts once or walks its path
+ * over {@code duration} ticks as {@code place * path(u)}, with form trees flattened lazily under the
+ * {@link Meter} so repetition is bounded by the budget, not the author. A stamp with a {@link Spark}
+ * bakes vanilla sparks the client ticks; the plan is deterministic in {@code (show, seed, budget)}.
  */
 public final class Evaluate {
 	private static final long JITTER_SALT = 0x5EED5EEDL;

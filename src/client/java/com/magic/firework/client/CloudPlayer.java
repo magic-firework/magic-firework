@@ -21,17 +21,10 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Client side of the baked executor: plays a {@link FrameStream} by emitting each point when
- * its tick offset arrives.
- *
- * <p>Points arrive ordered by time, so playback is one cursor per stream: no sorting, no
- * allocation per tick. This is why a whole figure fits in a single packet.
- *
- * <p>A point with a lifetime is a {@link FireworkSparkParticle}: the client spawns
- * the real vanilla particle once and lets vanilla's own tick handle drag, gravity, the trail,
- * flicker and the fade colour. A point without a lifetime is the older static puff and is
- * emitted as dust. A flickering static puff still uses the echo trick below, because dust has
- * no per-particle render hook.
+ * Client side of the baked executor: plays a {@link FrameStream} by emitting each point at its tick
+ * offset, in arrival order, so playback needs one cursor and no per-tick allocation. A point with a
+ * lifetime is a {@link FireworkSparkParticle}, so vanilla ticks drag, gravity, trail, flicker and
+ * fade; one without a lifetime is a static puff emitted as dust, which has no per-particle hook.
  */
 public final class CloudPlayer {
 	/** A misbehaving sender must not be able to queue unbounded clouds. */

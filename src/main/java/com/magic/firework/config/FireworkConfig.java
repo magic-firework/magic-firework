@@ -9,12 +9,10 @@ import com.google.gson.JsonParser;
 import com.magic.firework.MagicFirework;
 
 /**
- * Optional server policy for the limits that operators actually need to tune.
- *
- * <p>{@code config/magic-firework.json} is read once at mod initialisation. A missing file,
- * a missing key or an unparsable file keeps the default for that value, so an empty config is
- * exactly the behaviour of the previous release. Values are clamped to the same hard bounds
- * the code already assumes; a config cannot turn off a structural content limit.
+ * Optional server policy for the limits operators tune. {@code config/magic-firework.json} is read
+ * once at mod initialisation; a missing file, a missing key or an unparsable file keeps the default
+ * for that value, so an empty config behaves like the previous release. Values are clamped to the
+ * hard bounds the code assumes, and no config can turn off a structural content limit.
  */
 public record FireworkConfig(
 		int maxChildren,

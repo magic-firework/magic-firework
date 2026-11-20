@@ -7,11 +7,9 @@ import com.magic.firework.core.shape.Ink;
 import com.magic.firework.core.show.Show;
 
 /**
- * One immutable view of everything a data pack installed.
- *
- * <p>Reloading builds a whole new snapshot and swaps the reference, so a reader never sees a
- * half-cleared map. The snapshot only covers data packs; inline documents and the writable
- * library are resolved by {@code ContentService}.
+ * One immutable view of everything a data pack installed. Reloading builds a whole new snapshot
+ * and swaps the reference, so a reader never sees a half-cleared map. Only data packs are
+ * covered; inline documents and the writable library are resolved by {@code ContentService}.
  */
 public record ContentSnapshot(Map<Id, Ink> inks, Map<Id, Show> shows) {
 	public ContentSnapshot {

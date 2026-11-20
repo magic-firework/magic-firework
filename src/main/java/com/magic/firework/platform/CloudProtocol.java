@@ -12,12 +12,10 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.FriendlyByteBuf;
 
 /**
- * Wire format for a baked show: points plus the handful of flashes.
- *
- * <p>Positions are quantized to 1/512 block (range ±64 blocks), which is far finer than a
- * particle can show and halves the packet compared to raw doubles. Velocities use 1/4096
- * block/tick, enough for the 0.25-0.5 speeds a vanilla spark starts with. The show id is not
- * sent: the client only replays the baked stream, and the id bought nothing but bytes.
+ * Wire format for a baked show: points plus the handful of flashes. Positions are quantized to 1/512
+ * block (range ±64), far finer than a particle can show and half the packet of raw doubles; velocities
+ * use 1/4096 block/tick, enough for the 0.25-0.5 a vanilla spark starts with. The show id is not sent:
+ * the client only replays the baked stream, and the id bought nothing but bytes.
  */
 public final class CloudProtocol {
 	private static final float QUANT = 512.0F;

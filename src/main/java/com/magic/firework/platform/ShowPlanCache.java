@@ -8,12 +8,9 @@ import com.magic.firework.core.eval.Plan;
 import com.magic.firework.core.show.Show;
 
 /**
- * Small LRU of baked shows.
- *
- * <p>A show with no jitter or thickness is seed-independent, so the key uses seed 0 and the
- * same bake serves every burst. A seed-sensitive show still gets cached, but only repeated
- * bursts with the same seed can hit. The cache is cleared whenever content or the library
- * changes.
+ * Small LRU of baked shows. A show with no jitter or thickness is seed-independent, so the key uses
+ * seed 0 and one bake serves every burst; a seed-sensitive show is still cached, but only repeated
+ * bursts with the same seed can hit. The cache is cleared whenever content or the library changes.
  */
 public final class ShowPlanCache {
 	private static final int MAX_ENTRIES = 32;

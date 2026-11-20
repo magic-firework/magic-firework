@@ -8,11 +8,10 @@ import com.magic.firework.core.PointBudget;
 import com.magic.firework.core.eval.FrameStream;
 
 /**
- * Playback cursor for one baked stream: which points and flashes are due at a given tick, and
- * the repeat flashes a flickering static puff asks for.
- *
- * <p>Pure bookkeeping, extracted from {@link CloudPlayer} so the timing rules can be tested
- * without a client level. The caller still owns the particles and the per-tick budget count.
+ * Playback cursor for one baked stream: which points and flashes are due at a given tick, plus the
+ * repeat flashes a flickering static puff asks for. Pure bookkeeping, extracted from
+ * {@link CloudPlayer} so the timing rules are testable without a client level; the caller still
+ * owns the particles and the per-tick budget count.
  */
 public final class CloudCursor {
 	/** Ticks between the flashes of one flickering static puff. */
@@ -34,10 +33,8 @@ public final class CloudCursor {
 	}
 
 	/**
-	 * Emit everything due at {@code now}: echoes first, then flashes, then new points, matching
-	 * the order the renderer used before the cursor was extracted.
-	 *
-	 * @param echoSink  repeat flashes of a flickering static puff
+	 * Emit everything due at {@code now}: echoes, then flashes, then new points, in the renderer's order.
+	 * @param echoSink repeat flashes of a flickering static puff
 	 * @param flashSink vanilla flash overlays
 	 * @param pointSink first emission of each point
 	 */

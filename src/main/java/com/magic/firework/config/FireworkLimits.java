@@ -23,32 +23,24 @@ public final class FireworkLimits {
 	 */
 	public static final int maxChildrenCeiling = 256;
 	/**
-	 * Hard ceiling on a rocket's velocity in blocks/tick.
-	 *
-	 * <p>A launch moves at the speed its {@code launch} op or {@code flight.speed} asked for, and
-	 * that is already clamped to this number; the brake only ever makes it smaller. The cap is the
-	 * backstop that keeps a forged or future velocity from teleporting it across the world.
+	 * Hard ceiling on a rocket's velocity in blocks/tick. A launch moves at the speed its {@code launch}
+	 * op or {@code flight.speed} asked for, already clamped to this number; the brake only makes it
+	 * smaller. The cap is the backstop that keeps a forged or future velocity from teleporting it
+	 * across the world.
 	 */
 	public static double maxSpeed = 4.0;
 	/**
-	 * Per-tick brake along the flight line: the vanilla gravity value, so a rocket slows down at
-	 * the rate a falling entity speeds up.
-	 *
-	 * <p>The rocket applies it itself (see {@code FlightStep}) instead of switching vanilla gravity
-	 * on, for two reasons: 1.20.1 only applies gravity inside {@code LivingEntity.travel}, which
-	 * pulls unconditionally <em>downward</em> — the rocket has to stop at rest and hover instead of
-	 * falling back on the player, and a diagonally aimed shot has to slow down the same way a
-	 * vertical one does.
+	 * Per-tick brake along the flight line, the vanilla gravity value: a rocket slows down at the
+	 * rate a falling entity speeds up. The rocket applies it itself ({@code FlightStep}) because
+	 * 1.20.1 only applies gravity inside {@code LivingEntity.travel}, which pulls unconditionally
+	 * <em>downward</em>; the rocket must hover, and a diagonal shot must brake like a vertical one.
 	 */
 	public static final double deceleration = 0.08;
 	/**
-	 * Hard cap on how many rockets one item's nesting tree may describe, the root included.
-	 *
-	 * <p>This is the only structural bound on an item tree, and it is enough: a chain spends one
-	 * node per level, so a forged stack can never make the loader walk deeper than this many
-	 * rockets. How deep a show may <em>actually</em> split is a separate runtime budget
-	 * ({@link #maxDepth}); the two are deliberately independent, so raising the data budget never
-	 * raises what a launch is allowed to do.
+	 * Hard cap on how many rockets one item's nesting tree may describe, the root included. A chain
+	 * spends one node per level, so a forged stack cannot make the loader walk deeper, and raising it
+	 * never raises what a launch may do: how deep a show actually splits is the separate runtime
+	 * budget {@link #maxDepth}.
 	 */
 	public static final int maxNestingNodes = 128;
 	/** Global cap of rocket entities spawned per server tick. */

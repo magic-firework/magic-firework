@@ -3,11 +3,9 @@ package com.magic.firework.platform;
 import com.magic.firework.config.FireworkLimits;
 
 /**
- * Per-tick counters owned by one runtime instead of static fields.
- *
- * <p>Two limits share a ledger because both are "what may happen this tick": rocket spawns
- * and baked points. Resetting it is part of the runtime's tick, so two servers (or a test)
- * can never steal each other's allowance.
+ * Per-tick counters owned by one runtime instead of static fields. Two limits share a ledger because
+ * both are "what may happen this tick": rocket spawns and baked points. Resetting it is part of the
+ * runtime's tick, so two servers (or a test) can never steal each other's allowance.
  */
 public final class TickLedger {
 	private int spawns;

@@ -1,17 +1,10 @@
 package com.magic.firework.core.show;
 
 /**
- * Turns every point of a stamp into a vanilla firework spark.
- *
- * <p>The shape still decides <em>where the sparks are aimed</em>; this record decides how they
- * fly. Vanilla's firework particle uses a radial velocity, drag and gravity, a random lifetime,
- * an optional trail, a flicker flag and an optional fade colour. Those are all per-spark facts,
- * so they travel with the baked point instead of becoming a global show setting.
- *
- * <p>{@code normalize} chooses between the two vanilla emitters: a ball normalizes the emitted
- * point to a direction and gives every spark the same speed (vanilla {@code createParticleBall}),
- * while a shape keeps the point's own length so the outline survives (vanilla
- * {@code createParticleShape}).
+ * Turns every point of a stamp into a vanilla firework spark: the shape decides <em>where</em> sparks are
+ * aimed, this record decides how they fly. Velocity, drag, gravity, lifetime, trail, flicker and fade
+ * travel per point, not per show. {@code normalize} picks the emitter: a ball normalizes to a direction
+ * and equalises speed ({@code createParticleBall}), a shape keeps the point's length so the outline survives.
  */
 @SuppressWarnings("ArrayRecordComponent") // arrays are cloned in the compact constructor and in the accessors
 public record Spark(

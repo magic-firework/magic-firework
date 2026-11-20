@@ -14,8 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Item NBT layout.
- *
+ * @contract: the {@code MagicFirework} item tag layout; docs/spec.md §2.8 C8 owns the shape.
  * <pre>
  * MagicFirework: {
  *   profile: "magic-firework:ring12",
@@ -26,13 +25,10 @@ import net.minecraft.world.item.ItemStack;
  *   ]
  * }
  * </pre>
- *
- * The root tag and every child entry use the same shape, so {@link RocketSpec} reads and writes
- * the whole tree with one pair of methods. Only the overlay is stored per item, so editing the
- * data pack updates existing items; a key a player never touched always follows the profile.
- *
- * <p>The {@code Fireworks} tag is left untouched so the same stack is still a legal vanilla
- * firework rocket.
+ * The root tag and every child entry use the same shape, so {@link RocketSpec} reads and writes the
+ * whole tree with one pair of methods. Only the overlay is stored per item, so editing the data pack
+ * updates existing items; a key a player never touched always follows the profile. The
+ * {@code Fireworks} tag is left untouched, so the stack stays a legal vanilla rocket.
  */
 public final class FireworkDataHelper {
 	public static final String ROOT = "MagicFirework";

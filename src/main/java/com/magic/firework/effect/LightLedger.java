@@ -13,13 +13,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * Persistent record of the light blocks the {@code light} op placed.
- *
- * <p>{@link LightSources} keeps the same map in memory for ticking, but a crash would lose
- * it. This ledger is saved with the world so the next start can remove every block that was
- * still a {@code minecraft:light}; the blocks themselves are not part of the world save.
- *
- * <p>Stored as {@code dimensions: { "<dimension id>": { "<pos as long>": untilTick } }}.
+ * Persistent record of the light blocks the {@code light} op placed. {@link LightSources} keeps the same
+ * map in memory for ticking, but a crash would lose it; this ledger is saved with the world so the next
+ * start can remove every block that is still a {@code minecraft:light}.
+ * Stored as {@code dimensions: { "<dimension id>": { "<pos as long>": untilTick } }}.
  */
 public final class LightLedger extends SavedData {
 	public static final String DATA_NAME = "magic_firework_lights";

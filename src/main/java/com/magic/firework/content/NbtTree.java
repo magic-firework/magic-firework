@@ -25,13 +25,10 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * The one canonical view of an NBT value.
- *
- * <p>NBT compounds are backed by a {@link java.util.HashMap}, so two tags that mean the same
- * thing may serialise in different orders. Everything that needs identity (fingerprints,
- * exports, diffing) goes through this class, which sorts compound keys and preserves list
- * order. NBT is the canonical representation of content; JSON is only an import/export
- * format, precisely so {@code float} vs {@code double} survives a round trip.
+ * The one canonical view of an NBT value. Compounds are a {@link java.util.HashMap}, so two tags that
+ * mean the same thing may serialise in different orders; everything that needs identity
+ * (fingerprints, exports, diffing) goes through here, which sorts compound keys and preserves list
+ * order. NBT is canonical and JSON only an import/export format, so {@code float} vs {@code double} survives.
  */
 public final class NbtTree {
 	private NbtTree() {
@@ -49,12 +46,10 @@ public final class NbtTree {
 	}
 
 	/**
-	 * First 16 bytes of SHA-256 over the same canonical bytes, split into two longs.
-	 *
-	 * <p>The 64-bit FNV fingerprint is fine for cache diagnostics but too small to be an
-	 * identity: an inline document is player data. The 128-bit digest is still only a fast
-	 * rejection filter; {@link com.magic.firework.content.ContentRef.Inline#equals(Object)}
-	 * compares the document as well.
+	 * First 16 bytes of SHA-256 over the same canonical bytes, split into two longs. The 64-bit FNV
+	 * fingerprint is fine for cache diagnostics but too small to be identity: an inline document is
+	 * player data. The 128-bit digest is still only a fast rejection filter;
+	 * {@link com.magic.firework.content.ContentRef.Inline#equals(Object)} compares the document too.
 	 */
 	public static long[] fingerprint128(Tag tag) {
 		try {

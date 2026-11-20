@@ -20,14 +20,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The program side of a rocket: age, call stack, flight direction, the child rockets this
- * rocket may spawn (its own item's tree) and the delayed children already queued. No
- * {@code Level}, no packets, no particles, so it can be reasoned about and tested without a
- * running game. {@link MagicFireworkEntity} is the thin Minecraft adapter.
- *
- * <p>Everything here survives save/load: the call stack, the child budget, the child tree and
- * the pending queue. A delayed child used to be lost with the chunk; the queue is part of the
- * saved state now, so a reload resumes the same show.
+ * The program side of a rocket: age, call stack, flight direction, the child rockets this rocket may
+ * spawn (its own item's tree) and the delayed children already queued. No {@code Level}, no packets, no
+ * particles, so it is testable without a running game; {@link MagicFireworkEntity} is the thin adapter.
+ * Age, stack, budget, tree and queue all survive save/load, so a reload resumes the same show.
  */
 public final class RocketBrain {
 	private static final double EPSILON = 1.0E-6;
@@ -69,7 +65,6 @@ public final class RocketBrain {
 		return brain;
 	}
 
-	// ── state ────────────────────────────────────────────────────────────────
 
 	public boolean initialized() {
 		return state.initialized();
@@ -140,7 +135,6 @@ public final class RocketBrain {
 		return state.done() && doneTicks > Attributes.AFTERGLOW.get(bag());
 	}
 
-	// ── split children ───────────────────────────────────────────────────────
 
 	/** @return the child this rocket's item carries at {@code index}, or {@code null} for an empty slot */
 	public RocketSpec child(int index) {
@@ -184,7 +178,6 @@ public final class RocketBrain {
 		return state.nextChildSeed();
 	}
 
-	// ── client / persistence ─────────────────────────────────────────────────
 
 	public void acceptClientView(AttributeBag base, long seed, int age) {
 		this.state = ProgramState.clientView(base, seed, age);

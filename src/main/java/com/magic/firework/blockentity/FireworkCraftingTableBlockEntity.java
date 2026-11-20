@@ -49,7 +49,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		super(ModRegistries.FIREWORK_CRAFTING_TABLE_BLOCK_ENTITY, pos, state);
 	}
 
-	// ── persistence ───────────────────────────────────────────────────────────
 
 	@Override
 	protected void saveAdditional(CompoundTag tag) {
@@ -64,7 +63,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		ContainerHelper.loadAllItems(tag, this.items);
 	}
 
-	// ── menu ──────────────────────────────────────────────────────────────────
 
 	@Override
 	public Component getDisplayName() {
@@ -76,7 +74,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		return new FireworkEditorMenu(containerId, playerInventory, this);
 	}
 
-	// ── flight values ─────────────────────────────────────────────────────────
 
 	public float effectiveSpeed(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
@@ -88,7 +85,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		return resolved == null ? 0 : Attributes.FLIGHT_TICKS.get(effective(resolved));
 	}
 
-	// ── direction angles ─────────────────────────────────────────────────────
 
 	public float effectiveYaw(Definitions definitions) {
 		FireworkDataHelper.Resolved resolved = resolve(definitions);
@@ -107,13 +103,8 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	}
 
 	/**
-	 * Turns one of the direction dials and stores the angles on the firework.
-	 *
-	 * <p>The angles are relative to whoever launches the rocket: horizontal 0° is straight ahead,
-	 * growing toward their right; the vertical dial is the polar angle from world up (0° = up).
-	 * Both are clamped to 0–360. The world vector is resolved at launch, so the same firework
-	 * flies in the same relative direction wherever the player stands.
-	 *
+	 * Turns one dial and stores the angles on the firework, relative to whoever launches: 0° yaw is
+	 * straight ahead, 0° pitch is world up, both clamped to 0–360 and resolved at launch.
 	 * @param which {@link FireworkEditorMenu#ADJUST_YAW} or {@link FireworkEditorMenu#ADJUST_PITCH}
 	 * @param delta degrees to add, normally ±{@link #DIRECTION_STEP_DEGREES}
 	 */
@@ -151,14 +142,9 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 	}
 
 	/**
-	 * Moves one step along the speed or the flight-time scale. Both may reach zero but never go
-	 * negative.
-	 *
-	 * <p>Materials buy the steps *above* the profile's own value; below that they are free, so
-	 * lowering can never mint materials that were never paid for.
-	 *
-	 * @param which {@link FireworkEditorMenu#ADJUST_SPEED} or
-	 *              {@link FireworkEditorMenu#ADJUST_FLIGHT_TIME}
+	 * Moves one step along the speed or the flight-time scale; both may reach zero, never go negative.
+	 * Materials buy only the steps above the profile's value, so lowering never mints materials.
+	 * @param which {@link FireworkEditorMenu#ADJUST_SPEED} or {@link FireworkEditorMenu#ADJUST_FLIGHT_TIME}
 	 * @param delta {@code +1} to raise (consumes a material) or {@code -1} to lower (refunds one)
 	 */
 	public void adjustFlight(Definitions definitions, Player player, int which, int delta) {
@@ -334,7 +320,6 @@ public class FireworkCraftingTableBlockEntity extends BlockEntity implements Con
 		}
 	}
 
-	// ── Container ─────────────────────────────────────────────────────────────
 
 	@Override
 	public int getContainerSize() {

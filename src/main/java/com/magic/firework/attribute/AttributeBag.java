@@ -14,19 +14,10 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * An immutable, flat attribute map backed directly by a {@link CompoundTag}.
- *
- * <p>Keys are dotted strings such as {@code flight.speed}; values are plain NBT tags.
- * This is the whole "component system" of the mod: because the map <em>is</em> NBT,
- * keys written by a newer version (or by another mod) survive save/load, overlay and
- * network round-trips without any registration. Adding an attribute is one constant
- * in {@link Attributes} plus a read at the place that uses it.
- *
- * <p>Layering is a flat merge, upper layer wins. Immutability is by convention:
- * {@link #raw()} exposes the tag for reading, never mutate it.
- *
- * <p>Two bags are equal when they hold the same keys and the same tags, so a bag can be
- * compared (or used as a map key) like the value object it is.
+ * An immutable, flat attribute map backed by a {@link CompoundTag}: dotted keys such as
+ * {@code flight.speed}, plain NBT values. Because the map <em>is</em> NBT, keys written by a newer
+ * version survive save/load, overlay and network round-trips without registration. Layering is a
+ * flat merge, upper layer wins; {@link #raw()} is read-only by convention, never mutate it.
  */
 public final class AttributeBag {
 	public static final AttributeBag EMPTY = new AttributeBag(new CompoundTag());
@@ -57,7 +48,6 @@ public final class AttributeBag {
 		return tag instanceof CompoundTag compound ? of(compound) : EMPTY;
 	}
 
-	// ── typed reads ───────────────────────────────────────────────────────────
 
 	/**
 	 * Colour / id arrays accept both the NBT int-array form (saved data) and a JSON

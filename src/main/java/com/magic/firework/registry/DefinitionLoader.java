@@ -16,12 +16,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
- * Pure loader: reads {@code fireworks/*.json} and returns a fresh immutable registry.
- *
- * <p>A reload replaces the whole registry. A file that cannot be read or parsed is dropped
- * and logged with its id; the previous version is deliberately not kept, because keeping it
- * would need mutable merge state across reloads and would let a broken pack serve stale
- * content indefinitely.
+ * Pure loader: reads {@code fireworks/*.json} and returns a fresh immutable registry. A reload replaces
+ * the whole registry, and a file that cannot be read or parsed is dropped and logged with its id: the
+ * previous version is deliberately not kept, because that needs mutable merge state across reloads and
+ * would let a broken pack serve stale content indefinitely.
  */
 public final class DefinitionLoader {
 	private DefinitionLoader() {

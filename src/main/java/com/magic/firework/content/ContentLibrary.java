@@ -21,13 +21,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 
 /**
- * Server-side store for authored shows.
- *
- * <p>One NBT file per entry under the world's {@code magic_firework/library} directory. A
- * library entry is an inline document plus its author, so content can outlive the item that
- * carried it and still be resolved by id. Names are restricted to a safe alphabet, kept
- * apart from the namespace data packs use, and counted per author so a player cannot fill
- * the disk.
+ * Server-side store for authored shows: one NBT file per entry under the world's
+ * {@code magic_firework/library}. An entry is an inline document plus its author, so content
+ * outlives the item that carried it and still resolves by id. Names use a safe alphabet, kept
+ * apart from the data pack namespace, and are counted per author so one player cannot fill the disk.
  */
 public final class ContentLibrary {
 	public static final String NAMESPACE = "magic-firework";

@@ -19,12 +19,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Server-side scheduler for the non-visual part of a baked plan (sounds, temporary lights).
- *
- * <p>One instance per runtime: the pending list is dropped with the server, so a stopped or
- * switched world cannot leave its {@link ServerLevel} references behind. Entries keep the
- * dimension id, not the level, and the list has a hard cap; a dimension unload drops its
- * entries immediately instead of waiting for their tick.
+ * Server-side scheduler for the non-visual part of a baked plan (sounds, temporary lights). One
+ * instance per runtime: the pending list dies with the server, so a stopped or switched world cannot
+ * leave its {@link ServerLevel} references behind. Entries keep the dimension id, not the level, the
+ * list has a hard cap, and a dimension unload drops its entries instead of waiting for their tick.
  */
 public final class ScheduledEffects {
 	private final LightSources lights;

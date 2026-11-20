@@ -11,11 +11,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 
 /**
- * Bridges the profile packet and the client entity.
- *
- * <p>The spawn packet and the profile packet may arrive in either order for a late
- * tracker, so profiles for unknown entities wait here until the entity shows up. The map is
- * bounded: a profile whose entity never arrives is dropped rather than growing forever.
+ * Bridges the profile packet and the client entity. The spawn and profile packets may arrive in
+ * either order for a late tracker, so a profile for an unknown entity waits here until it shows
+ * up; the map is bounded, so one whose entity never arrives is dropped rather than growing
+ * forever.
  */
 public final class ClientProfiles {
 	private static final int MAX_PENDING = 256;

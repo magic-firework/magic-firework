@@ -7,14 +7,10 @@ import com.magic.firework.core.path.Path;
 import com.magic.firework.core.shape.Form;
 
 /**
- * One instance of a form: when, how long, how it moves, and how it is brushed.
- *
- * <p>The shape itself lives in a {@link Form} tree; a stamp only says how that tree is
- * placed and when it appears. Everything the evaluator needs is in this one record, so the
- * bottom-level loop stays a loop.
- *
- * <p>{@link #spark()} is optional. Without it every point is a static puff at its baked position;
- * with it each point becomes a vanilla firework spark carrying its own velocity and lifetime.
+ * One instance of a form: when, how long, how it moves, and how it is brushed. The shape lives in a
+ * {@link Form} tree; a stamp only says how that tree is placed and when it appears, so the bottom-level
+ * loop stays a loop. {@link #spark()} is optional: without it every point is a static puff, with it each
+ * point becomes a vanilla spark carrying its own velocity and lifetime.
  */
 public record Stamp(
 		Form form,

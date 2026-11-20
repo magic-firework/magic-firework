@@ -10,11 +10,10 @@ import com.magic.firework.core.show.Show;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
- * Pure loader: reads {@code inks/} and {@code shows/} and returns a fresh snapshot.
- *
- * <p>It touches no shared state, so the reload listener can build a snapshot off to the side
- * and the runtime can swap it in one reference write. The per-file read and drop policy lives
- * in {@link JsonResourceLoader}, shared with the firework-profile loader.
+ * Pure loader: reads {@code inks/} and {@code shows/} and returns a fresh snapshot. It touches
+ * no shared state, so the reload listener can build a snapshot off to the side and the runtime
+ * swaps it in with one reference write. The per-file read and drop policy lives in
+ * {@link JsonResourceLoader}.
  */
 public final class ContentLoader {
 	private ContentLoader() {

@@ -8,15 +8,10 @@ import com.magic.firework.core.Transform;
 import com.magic.firework.core.Vec3;
 
 /**
- * A composable shape: a point cloud plus the transforms that place copies of it.
- *
- * <p>Forms are authoring units, not execution units. {@link #emit} flattens them into points
- * under the caller's {@link Meter}, so a ring of two hundred rings still cannot exceed the
- * server's point budget. The tree is plain data: no cycles, no code, no world.
- *
- * <p>{@code place}, {@code colorOffset} and {@code size} are the three knobs every node
- * shares: they compose down the tree, which is what lets one leaf ink become a ring of
- * recoloured, scaled copies without duplicating it.
+ * A composable shape: a point cloud plus the transforms that place copies of it. Forms are authoring
+ * units, not execution units; {@link #emit} flattens them into points under the caller's {@link Meter},
+ * so a ring of two hundred rings still cannot exceed the server's point budget. The tree is plain
+ * data (no cycles, no code, no world), and {@code place}, {@code colorOffset}, {@code size} compose down it.
  */
 public sealed interface Form {
 	Transform place();

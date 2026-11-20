@@ -56,13 +56,9 @@ public class MagicFireworkEntity extends Entity {
 	}
 
 	/**
-	 * Creates one rocket from a spec. The spec is the whole definition: the profile whose
-	 * program and defaults it runs, the per-instance overlay, and the child tree its
-	 * {@code spawn} ops may name by slot.
-	 *
-	 * <p>How deep a split chain may go is a safety constant, not something an item declares:
-	 * {@link FireworkLimits#maxDepth} bounds every generation, whatever the data packs say.
-	 *
+	 * Creates one rocket from a spec: the profile whose program and defaults it runs, the per-instance
+	 * overlay, and the child tree its {@code spawn} ops may name by slot. Split depth is a safety
+	 * constant, {@link FireworkLimits#maxDepth}, not something an item declares.
 	 * @param parent the rocket that split this one, or {@code null} for a launch
 	 */
 	public static MagicFireworkEntity launch(FireworkRuntime runtime, ServerLevel level, Vec3 position,
@@ -97,10 +93,8 @@ public class MagicFireworkEntity extends Entity {
 	}
 
 	/**
-	 * The part of a launch that does not touch the world: which profile runs, the resolved
-	 * attribute base and the generation depth. A pure seam so a launch can be validated without
-	 * a server; {@link #launch} only appends entity creation and the effects.
-	 *
+	 * The part of a launch that does not touch the world: which profile runs, the resolved attribute base
+	 * and the generation depth. A pure seam, so a launch can be validated without a server.
 	 * @param depth 0 for a root launch, {@code parent.depth() + 1} for a split
 	 * @return the plan, or {@code null} when the profile is missing or the depth is over the limit
 	 */
@@ -119,7 +113,6 @@ public class MagicFireworkEntity extends Entity {
 	public record Launch(FireworkProfile profile, AttributeBag base, int depth) {
 	}
 
-	// ── ticking ──────────────────────────────────────────────────────────────
 
 	@Override
 	public void tick() {
@@ -136,10 +129,8 @@ public class MagicFireworkEntity extends Entity {
 		AttributeBag bag = brain.bag();
 
 		if (level().isClientSide) {
-			// The client runs the same flight step as the server. Server positions stay
-			// authoritative (a move packet snaps us back onto them), but moving here as well is
-			// what makes the rocket advance on every client tick instead of stepping at the
-			// packet rate, which is what made it look jerky.
+			// The client runs the same flight step as the server: server positions stay
+			// authoritative, but stepping locally is what keeps it smooth between packets.
 			if (brain.initialized()) {
 				setDeltaMovement(FlightStep.step(getDeltaMovement()));
 				move(MoverType.SELF, getDeltaMovement());
@@ -205,7 +196,6 @@ public class MagicFireworkEntity extends Entity {
 		setXRot((float) (-Math.atan2(velocity.y, velocity.horizontalDistance()) * (180.0 / Math.PI)));
 	}
 
-	// ── state accessors ──────────────────────────────────────────────────────
 
 	public long seed() {
 		return brain.seed();
@@ -255,7 +245,6 @@ public class MagicFireworkEntity extends Entity {
 		}
 	}
 
-	// ── sync / persistence ───────────────────────────────────────────────────
 
 	/** Client side: bind the synced attributes and velocity, then fly. */
 	public void acceptProfile(long seed, int age, Vec3 velocity, AttributeBag base) {
@@ -309,7 +298,6 @@ public class MagicFireworkEntity extends Entity {
 		brain = loaded;
 	}
 
-	// ── entity constraints ───────────────────────────────────────────────────
 
 	@Override
 	public boolean isPickable() {

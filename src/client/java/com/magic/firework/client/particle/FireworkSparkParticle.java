@@ -13,12 +13,10 @@ import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.core.particles.SimpleParticleType;
 
 /**
- * A configurable copy of vanilla's firework spark.
- *
- * <p>Vanilla's {@code FireworkParticles.SparkParticle} is package-private, so a baked show
- * cannot set its colour, fade, lifetime, trail or flicker. Copying the small class gives the
- * show those knobs while keeping vanilla's own physics: friction 0.91, gravity 0.004/tick,
- * the half-life trail and the flicker render rule.
+ * A configurable copy of vanilla's firework spark. {@code FireworkParticles.SparkParticle} is
+ * package-private, so a baked show cannot set its colour, fade, lifetime, trail or flicker;
+ * copying the small class gives the show those knobs while keeping vanilla's physics: friction
+ * 0.91, gravity 0.004/tick, the half-life trail and the flicker render rule.
  */
 public class FireworkSparkParticle extends SimpleAnimatedParticle {
 	private boolean trail;

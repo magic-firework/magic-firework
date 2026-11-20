@@ -244,7 +244,6 @@ public class FireworkEditorScreen extends AbstractContainerScreen<FireworkEditor
 		shownPage = page;
 	}
 
-	// ── renderer view ────────────────────────────────────────────────────────
 
 	FireworkEditorMenu menu() {
 		return this.menu;

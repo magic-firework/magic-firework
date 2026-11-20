@@ -23,11 +23,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Written blueprint + its frozen bill -> the firework the blueprint describes.
- *
- * <p>Only a written blueprint matches; the bill is read from its NBT, so a data-pack change
- * never changes what an existing blueprint costs. Extra items are rejected, which keeps the
- * grid a precise payment rather than a suggestion.
+ * Written blueprint + its frozen bill -> the firework the blueprint describes. Only a written blueprint
+ * matches; the bill is read from its NBT, so a data-pack change never changes what an existing blueprint
+ * costs. Extra items are rejected, which keeps the grid a precise payment rather than a suggestion.
  */
 public final class BlueprintCraftingRecipe extends CustomRecipe {
 	public BlueprintCraftingRecipe(ResourceLocation id, CraftingBookCategory category) {

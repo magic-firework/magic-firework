@@ -18,12 +18,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Runtime smoke in a real server world: the light block is actually set and removed, and a
- * dimension unload drops both the live block and the queued effects.
- *
- * <p>The restart case serializes the ledger, deserializes it into a fresh instance and runs
- * recovery against the block the "crash" left behind. The only part a game test cannot do is
- * kill the JVM between the two runs; the on-disk bytes are the same ones this test round-trips.
+ * Runtime smoke in a real server world: the light block is actually set and removed, and a dimension
+ * unload drops both the live block and the queued effects. The restart case serializes the ledger,
+ * deserializes it into a fresh instance and recovers against the block the "crash" left behind; the
+ * on-disk bytes are the same ones a real kill would leave, which is the only part a test cannot do.
  */
 public final class MagicFireworkGameTest implements FabricGameTest {
 	private static final BlockPos CENTER = new BlockPos(1, 1, 1);

@@ -20,16 +20,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Server -> client profile and cloud sync.
- *
- * <p>1.20.1 has no {@code CustomPacketPayload}, so this is a named channel carrying a
- * {@link FriendlyByteBuf}. Only what the client cannot derive travels: the seed, the age
- * and the resolved attribute bag (the trail is rendered from it). The program itself
- * never leaves the server, so a data pack mismatch can only change particles, never the
- * simulation.
- *
- * <p>Every packet starts with {@link #PROTOCOL_VERSION}. A client with a different version
- * drops the packet instead of misreading it.
+ * Server -> client profile and cloud sync. 1.20.1 has no {@code CustomPacketPayload}, so this is a named
+ * channel carrying a {@link FriendlyByteBuf}. Only the seed, the age and the resolved attribute bag
+ * travel (the trail renders from it): the program never leaves the server, so a data pack mismatch can
+ * only change particles. Every packet starts with {@link #PROTOCOL_VERSION}; a wrong version drops it.
  */
 public final class FireworkNetworking {
 	public static final int PROTOCOL_VERSION = 4;

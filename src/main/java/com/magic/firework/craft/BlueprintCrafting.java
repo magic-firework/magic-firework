@@ -13,14 +13,10 @@ public final class BlueprintCrafting {
 	}
 
 	/**
-	 * The grid contract shared with the crafting recipe: exactly one written blueprint, and a
-	 * payment that matches the frozen bill both in total and per ingredient. Written as a pure
-	 * count check so it can be tested without a live item registry.
-	 *
-	 * @param blueprints     how many blueprint items the grid contains
-	 * @param written        how many of those are written
-	 * @param provided       every non-blueprint ingredient, by item id
-	 * @return whether the blueprint may be redeemed for its firework
+	 * The grid contract: one written blueprint and a payment matching the frozen bill per ingredient.
+	 * @param blueprints how many blueprint items the grid contains
+	 * @param written    how many of those are written
+	 * @param provided   every non-blueprint ingredient, by item id
 	 */
 	public static boolean matchesBill(List<Cost> bill, int blueprints, int written,
 			Map<String, Integer> provided) {

@@ -1,14 +1,10 @@
 package com.magic.firework.core;
 
 /**
- * Per-tick cap on client-side particle spawns.
- *
- * <p>The server sends a baked stream; a burst that arrives after a lag spike, or several
- * bursts in the same tick, must not turn into an unbounded number of particles. A claim is
- * cheap and single-threaded: the client tick is the only writer.
- *
- * <p>This is deliberately not a queue: a particle that misses its tick is dropped and
- * counted, because replaying it later would break the show's timing.
+ * Per-tick cap on client-side particle spawns. A burst arriving after a lag spike, or several bursts
+ * in one tick, must not turn into unbounded particles. A claim is cheap and single-threaded: the
+ * client tick is the only writer. Deliberately not a queue, because a particle that misses its tick
+ * is dropped and counted: replaying it later would break the show's timing.
  */
 public final class PointBudget {
 	private final int perTick;

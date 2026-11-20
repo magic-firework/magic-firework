@@ -6,11 +6,9 @@ import com.magic.firework.core.Vec3;
 import com.magic.firework.core.path.Path;
 
 /**
- * A point-cloud shape in unit space, loaded from {@code inks/*.json}.
- *
- * <p>An ink is the leaf of a {@link Form} tree: composition (groups, rings, arrays,
- * mirrors, colour and scale) lives in {@code Form}, so a leaf stays a plain cloud that can
- * be inspected and edited without code.
+ * A point-cloud shape in unit space, loaded from {@code inks/*.json}. An ink is the leaf of a
+ * {@link Form} tree: composition (groups, rings, arrays, mirrors, colour, scale) lives in {@code Form},
+ * so a leaf stays a plain cloud that can be inspected and edited without code.
  */
 public final class Ink {
 	private final Id id;

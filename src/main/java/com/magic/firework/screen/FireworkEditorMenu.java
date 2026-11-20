@@ -17,15 +17,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
- * The firework editor container, bound to the firework crafting table.
- *
- * <p>One menu backs both pages of the screen: the main page shows the category grid and the
- * flight page shows the speed / flight-time steppers. Keeping a single menu means switching
- * pages never reopens a screen, so the mouse cursor never jumps.
- *
- * <p>The container is the crafting table's block entity, so the firework stays in the block
- * when the menu closes — like a furnace — instead of dropping. The flight steppers read the
- * firework's current values through synced data slots.
+ * The firework editor container, bound to the firework crafting table. One menu backs both pages: the main
+ * page shows the category grid, the flight page the speed and flight-time steppers; keeping a single menu
+ * means switching pages never reopens a screen, so the cursor never jumps. The container is the block
+ * entity, so the firework stays in the block when the menu closes, like a furnace, instead of dropping.
  */
 public class FireworkEditorMenu extends AbstractContainerMenu {
 	/** Which value the flight page's steppers adjust. */
@@ -91,7 +86,6 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 		return center;
 	}
 
-	// ── synced flight values ─────────────────────────────────────────────────
 
 	@Override
 	public void broadcastChanges() {
@@ -125,15 +119,11 @@ public class FireworkEditorMenu extends AbstractContainerMenu {
 		return this.editorData.get(DATA_PITCH) / 1000.0F;
 	}
 
-	// ── slot routing ─────────────────────────────────────────────────────────
 
 	/**
-	 * Shift-click routing.
-	 *
-	 * <p>Each target range must be disjoint from the source slot. {@code moveItemStackTo} merges
-	 * a stack into any slot holding the same item and tags — including the source slot itself,
-	 * which would double the stack — so the main inventory and the hotbar are routed into each
-	 * other, never into themselves.
+	 * Shift-click routing. Each target range must be disjoint from the source slot: {@code moveItemStackTo}
+	 * merges into any slot holding the same item and tags, including the source slot itself, which would
+	 * double the stack. So the main inventory and the hotbar are routed into each other, never into themselves.
 	 */
 	@Override
 	public ItemStack quickMoveStack(Player player, int index) {

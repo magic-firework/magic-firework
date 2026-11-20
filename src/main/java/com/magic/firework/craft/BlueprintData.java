@@ -6,8 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * The {@code MagicFireworkBlueprint} tag layout.
- *
+ * @contract: the {@code MagicFireworkBlueprint} tag layout; docs/spec.md §2.8 C8 owns the shape.
  * <pre>
  * MagicFireworkBlueprint: {
  *   v: 1,
@@ -15,9 +14,8 @@ import net.minecraft.nbt.Tag;
  *   cost: [ { item: "minecraft:paper", count: 1 }, ... ]            // frozen at write time
  * }
  * </pre>
- *
- * <p>A blueprint is "written" exactly when it carries a {@code source}. The writing recipe
- * only accepts a blank blueprint, so a written one can never be edited again.
+ * A blueprint is "written" exactly when it carries a {@code source}; the writing recipe only
+ * accepts a blank blueprint, so a written one can never be edited again.
  */
 public final class BlueprintData {
 	public static final String ROOT = "MagicFireworkBlueprint";

@@ -1,12 +1,10 @@
 package com.magic.firework.core;
 
 /**
- * Structural limits of the content format itself.
- *
- * <p>These are part of the schema: exceeding one means the content is invalid. Server policy
- * (points baked per tick, split depth, spawn budget) lives in
- * {@link com.magic.firework.config.FireworkLimits} instead. Keeping the two apart is what
- * stops a data pack from raising a server limit and a config from redefining the format.
+ * Structural limits of the content format itself: part of the schema, so exceeding one means the
+ * content is invalid. Server policy (points per tick, split depth, spawn budget) lives in
+ * {@link com.magic.firework.config.FireworkLimits}; keeping the two apart is what stops a data
+ * pack from raising a server limit and a config from redefining the format.
  */
 public final class ContentLimits {
 	/** Points a single ink may contain. */

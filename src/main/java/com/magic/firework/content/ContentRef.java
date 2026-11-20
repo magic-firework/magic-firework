@@ -10,11 +10,9 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * Where a piece of content comes from.
- *
- * <p>A {@code show} attribute may hold either a plain id (content installed by a data pack)
- * or a compound (content carried by the item itself). One type covers both, so every
- * consumer — launcher, library, exporter — resolves content the same way.
+ * Where a piece of content comes from. A {@code show} attribute holds either a plain id (content
+ * installed by a data pack) or a compound (content carried by the item itself); one type covers
+ * both, so launcher, library and exporter resolve content the same way.
  */
 public sealed interface ContentRef {
 

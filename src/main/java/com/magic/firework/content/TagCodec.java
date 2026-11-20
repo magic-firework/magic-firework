@@ -27,19 +27,15 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * The content schema, read from NBT.
- *
- * <p>NBT is the canonical representation: an item's {@code show} value, a data pack file and a
- * library entry are the same thing after {@link com.magic.firework.content.JsonToNbt} has run,
- * so one parser serves all three. Unknown keys are ignored (forward compatibility); unknown
- * {@code type} values and dangling ids are hard errors, because silently skipping a node
- * would draw a different figure than the author wrote.
+ * The content schema, read from NBT. NBT is canonical: an item's {@code show} value, a data pack file
+ * and a library entry are the same thing after {@link com.magic.firework.content.JsonToNbt} has run,
+ * so one parser serves all three. Unknown keys are ignored (forward compatibility), while unknown
+ * {@code type} values and dangling ids are hard errors: skipping a node would draw a different figure.
  */
 public final class TagCodec {
 	private TagCodec() {
 	}
 
-	// ── ink ─────────────────────────────────────────────────────────────────
 
 	public static Ink parseInk(Id id, Tag json) throws CodecException {
 		CompoundTag object = object(json, "ink " + id);
@@ -83,7 +79,6 @@ public final class TagCodec {
 		}
 	}
 
-	// ── show ────────────────────────────────────────────────────────────────
 
 	public static Show parseShow(Id id, Tag json, Function<Id, Ink> inks) throws CodecException {
 		CompoundTag object = object(json, "show " + id);
@@ -140,7 +135,6 @@ public final class TagCodec {
 				ints(object, "fadeColors"));
 	}
 
-	// ── form ────────────────────────────────────────────────────────────────
 
 	private static Form form(Tag json, Id showId, String where, Function<Id, Ink> inks, int[] nodes, int depth)
 			throws CodecException {
@@ -279,7 +273,6 @@ public final class TagCodec {
 		return events;
 	}
 
-	// ── helpers ─────────────────────────────────────────────────────────────
 
 	private static CompoundTag object(Tag tag, String what) throws CodecException {
 		if (!(tag instanceof CompoundTag compound)) {
