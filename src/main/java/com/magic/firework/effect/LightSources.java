@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.Blocks;
  * is cleaned up on the next start; {@link #clear()} runs when the runtime closes.
  */
 public final class LightSources {
-	private final Map<ServerLevel, Map<BlockPos, Long>> placed = new IdentityHashMap<>();
+	private final IdentityHashMap<ServerLevel, Map<BlockPos, Long>> placed = new IdentityHashMap<>();
 	private LightLedger ledger;
 
 	/**

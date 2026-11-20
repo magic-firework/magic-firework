@@ -25,6 +25,9 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
+        with:
+          # Spotless ratchets from a fixed commit; it must be present.
+          fetch-depth: 0
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
       - name: setup jdk
@@ -58,7 +61,12 @@ jobs:
       - name: check the documentation contract
         run: python tools/check_docs.py
       - name: build
-        run: ./gradlew build
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            ./gradlew build -Pmod_version="${GITHUB_REF_NAME}"
+          else
+            ./gradlew build -Pmod_version="0.0.0-${GITHUB_SHA::7}"
+          fi
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
