@@ -16,12 +16,14 @@
 | B0 | 完成 | `34e2170` `b505a94` `f17097b` `b5671bb` `b4fb2b0` | 3 个功能提交各自 `./gradlew test` 通过；读侧上限与校验同提交 |
 | B1 | 完成（ENG-04 的运行期断言留 B3） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` | 4 个提交各自 `./gradlew test` 通过 |
 | B2 | 完成 | `cc32bf7` `77dd3e7` | `SchemaParityTest` + 共享夹具 + `check_docs.py`；Python 32/32、3 个坏夹具被拒、边界夹具通过 |
-| B3 | 部分 | `abb4376` | Loom `1.19.4` pin 与 `.editorconfig` 已落；Spotless/ErrorProne/JaCoCo/依赖锁定/运行期冒烟待做 |
+| B3 | 部分（门禁/可复现完成；运行期冒烟未完成） | `abb4376` `61b1afe` `217be80` `77874d9` `d150e66` | Spotless/ErrorProne/JaCoCo/锁定/校验/版本已落；干净 clone 的 `build --offline` 通过 |
 | B4 | 未开始 | — | — |
 
-当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build` 通过；`./gradlew test` 共 **179** 个测试、0 失败。
+当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build --offline` 在干净 clone 中通过；`./gradlew check`（含 Spotless、ErrorProne `-Werror`、JaCoCo）通过；`./gradlew test` 共 **179** 个测试、0 失败；instruction coverage **46.3%**，阈值 45%；Python 32/32、坏夹具被拒、`check_docs.py` 通过。
 
-观察：开启 configuration cache 时曾出现 `EOFException` / `NoSuchFileException`（`build/test-results/test/binary/...`），改用 `--no-configuration-cache` 后稳定；CI 默认仍开启，B3 应观察或关闭缓存以排除测试结果写入竞争。§1.3 的“未执行”项指评审时状态，执行阶段已补上 `build`/`test`，但未启动客户端/专用服务器。
+运行期观察：`./gradlew runServer` 已走到 `firework runtime started` 与内容加载，世界生成超过本地超时（无崩溃栈）；B3 的 light/pending 冒烟断言仍未完成。
+
+观察：开启 configuration cache 时曾出现 `EOFException` / `NoSuchFileException`（`build/test-results/test/binary/...`），改用 `--no-configuration-cache` 后稳定；CI 默认仍开启，B3 应观察或关闭缓存以排除测试结果写入竞争。§1.3 的“未执行”项指评审时状态，执行阶段已补上 `build`/`test`，但未启动客户端或完成专用服务器/GameTest 冒烟。
 
 ---
 
@@ -582,7 +584,8 @@ assert lightSources.placedCount(DIM) == 0;
 - **范围**：ENG-11、ENG-12；并在此批完成 ENG-04/ENG-18 的端到端冒烟。
 - **进入条件**：B0 完成（测试可见）；B1 的 `LightLedger` 与启动清理已合入（供冒烟断言）；B2 的 `check_docs.py` 已进 CI。
 - **动作**：`.editorconfig` + Spotless + ErrorProne + JaCoCo 阈值；CI 改跑 `./gradlew check`；新增 `gametest` 与 `runServer` 冒烟 job（先写 `eula=true`，执行放置/清理/停服/重启断言）；Loom pin、依赖锁定、校验元数据、tag 驱动版本、CHANGELOG。
-- **退出条件**：ENG-11 的三类注入故障分别让 CI 变红；`./gradlew build --offline` 在缓存环境通过；`gradle.lockfile` 与 `gradle/verification-metadata.xml` 入库；`gradle.properties` 无 `SNAPSHOT`；冒烟 job 断言“重启后 light 计数 = 0”“卸载维度后 pending/placed = 0”。
+- **执行结果（部分）**：Spotless（ratchet 自 `9493d51`）、ErrorProne 2.36 + `-Werror`、JaCoCo 0.8.13（45% instruction floor）、依赖锁定 + SHA-256 校验（Loom 本地 remap 的 group 走 `trusted-artifacts`）、版本来自 `-Pmod_version`，提交 `d150e66`；CI 仍跑 `build`（内含 `check`）。`runServer` 到达 runtime start，但冒烟 job 与“重启后 light=0 / 卸载后 pending=0”两条断言未完成。
+- **退出条件**：ENG-11 的三类注入故障分别让 CI 变红；`./gradlew build --offline` 在缓存环境通过；`gradle.lockfile` 与 `gradle/verification-metadata.xml` 入库；`gradle.properties` 无 `SNAPSHOT`；冒烟 job 断言“重启后 light 计数 = 0”“卸载维度后 pending/placed = 0”。**已满足前四项（Spotless 坏文件已实测变红；JaCoCo/ErrorProne 已接线）；冒烟两项未满足。**
 - **依赖**：B0（测试可见）、B1（清理实现）、B2（文档检查进 CI）。ENG-12 与其余部分无依赖，可并行。
 
 ### B4 · 结构与性能
@@ -634,12 +637,12 @@ assert lightSources.placedCount(DIM) == 0;
 5. **ENG-04 选“SavedData 持久化 + 启动清理 + close 回收”**；被否：“仅 close 时回收”——崩溃/杀进程路径覆盖不到，正是残留的主因。
 6. **ENG-05 选“schema 为规范真源 + parity test 强制 Java 对齐”**；被否 A：“三份真相 + 人工同步”——漂移正是现状；被否 B：“从 schema 代码生成 Java 常量”——引入构建期代码生成，收益不抵复杂度。
 7. **ENG-06 选“新增 `docs/content-format.md`（英文）”**；被否 A：“恢复 README 的 `## Programs`”——入口页会被 63 行语义淹没，且 README 已明确只留 requirements/build/license；被否 B：“只写注释”——没有任何检查能拦住再次删除。
-8. **ENG-08 选“Eclipse formatter profile（tab、120 列）+ Spotless”**；被否：“google-java-format”——会把全库 tab 改成空格，产生 85 文件的纯格式 diff，破坏 blame。
-9. **ENG-12 选“Loom pin 到实施时的最新 release + 依赖锁定 + 校验元数据 + tag 驱动版本”**；被否 A：继续 `-SNAPSHOT`——不可复现；被否 B：手写 `1.0.0`——发布版本与 tag 脱节。
+8. **ENG-08 选“Eclipse formatter profile（tab、120 列）+ Spotless，ratchet 自 `9493d51`”**；被否：“google-java-format”——会把全库 tab 改成空格，产生 85 文件的纯格式 diff，破坏 blame。补充：一次性 Eclipse 全库格式化仍会改 30 个文件/约 2000 行，因此改为 ratchet；B4 触碰旧文件时再格式化。
+9. **ENG-12 选“Loom pin 到实施时的最新 release + 依赖锁定 + 校验元数据 + tag 驱动版本”**；被否 A：继续 `-SNAPSHOT`——不可复现；被否 B：手写 `1.0.0`——发布版本与 tag 脱节。校验元数据对 Loom 本地 remap 的 `remapped.net.fabricmc.fabric-api` group 使用 `trusted-artifacts`（生成物没有稳定的发布校验和）；其余依赖仍校验 SHA-256。
 10. **ENG-14 选 `config/magic-firework.json`，缺文件即默认、不写文件**；被否 A：环境变量/系统属性——运维不可发现；被否 B：每世界配置——安全上限必须在世界加载前就生效。
 11. **ENG-03 的客户端预算 = 4096 点/tick**（服务端全局 8192 的一半）；被否 A：直接复用 8192——客户端峰值会与服务器峰值叠加；被否 B：不设预算——信任边界不完整。ENG-15 只做同一常量的交叉断言，不另设第二个预算。
 12. **ENG-18 的 pending 上限 = 1024 条**；被否 A：无界——内存可被长 show 放大；被否 B：只靠 TTL——到期前仍持有维度引用。
-13. **覆盖率阈值 = 当前 baseline 向下取整，每批 +5%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
+13. **覆盖率阈值 = 45% instruction（B2 基线 46.3%），B4 目标 +5% 到 50%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
 14. **严重度口径**：P0 行为错误/信任边界；P1 契约/文档/可验证性；P2 结构/工程化/性能。被否：按“改动行数”排序——与用户风险无关。
 15. **标签**：`p0/p1/p2` + `area:network|content|docs|build|client|world|craft|platform|test|config`；里程碑 B0–B4。被否：按文件路径打标签——跨层问题会被拆散。
 16. **语言**：报告正文中文，代码标识符/路径/命令/新文档 `docs/content-format.md` 保持英文。被否：报告英文——团队沟通语言是中文；文档中文——与 README/代码注释不一致。
