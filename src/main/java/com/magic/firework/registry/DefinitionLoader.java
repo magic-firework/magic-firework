@@ -1,24 +1,18 @@
 package com.magic.firework.registry;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.magic.firework.MagicFirework;
 import com.magic.firework.attribute.AttributeBag;
 import com.magic.firework.content.FireworkProfile;
-import com.magic.firework.content.JsonToNbt;
+import com.magic.firework.content.JsonResourceLoader;
 import com.magic.firework.program.Program;
 import com.magic.firework.program.ProgramParser;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
@@ -34,18 +28,7 @@ public final class DefinitionLoader {
 	}
 
 	public static Definitions load(ResourceManager manager) {
-		Map<ResourceLocation, Tag> documents = new LinkedHashMap<>();
-		Map<ResourceLocation, Resource> resources = manager.listResources(
-				"fireworks", path -> path.getPath().endsWith(".json"));
-		for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
-			try (InputStream stream = entry.getValue().open()) {
-				JsonElement json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
-				documents.put(entry.getKey(), JsonToNbt.convert(json));
-			} catch (Exception exception) {
-				MagicFirework.LOGGER.warn("failed to read firework profile {}", entry.getKey(), exception);
-			}
-		}
-		return load(documents);
+		return load(JsonResourceLoader.load(manager, "fireworks"));
 	}
 
 	/**
@@ -90,12 +73,6 @@ public final class DefinitionLoader {
 	}
 
 	private static ResourceLocation toId(ResourceLocation file) {
-		String path = file.getPath();
-		String prefix = "fireworks/";
-		if (!path.startsWith(prefix) || !path.endsWith(".json")) {
-			return null;
-		}
-		String name = path.substring(prefix.length(), path.length() - ".json".length());
-		return ResourceLocation.tryBuild(file.getNamespace(), name);
+		return JsonResourceLoader.id(file, "fireworks");
 	}
 }
