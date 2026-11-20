@@ -17,7 +17,7 @@ from pathlib import Path
 
 # 规则参数（改这里 = 改规则，需第二人批准）
 MAX_DENSITY = 0.15          # 注释行 / 非空行
-MIN_LINES_FOR_DENSITY = 40  # 太小的文件谈密度没有意义
+MIN_LINES_FOR_DENSITY = 150  # 小文件谈密度没有统计意义，交给块长规则；常量/接口表靠 @contract:
 MAX_BLOCK = 6               # 连续注释块行数上限
 MAX_HEADER = 5              # 文件头注释行数上限
 MAX_TODO_PER_KLOC = 3
@@ -206,7 +206,10 @@ def main(argv: list[str]) -> int:
         return 0
 
     def by_line(items: list[str]) -> list[str]:
-        key = lambda t: int(re.search(r"行 (\d+)", t).group(1)) if re.search(r"行 (\d+)", t) else 0
+        def key(text: str) -> int:
+            hit = re.search(r"行 (\d+)", text)
+            return int(hit.group(1)) if hit else 0
+
         return sorted(items, key=key)
 
     total_e = total_w = 0

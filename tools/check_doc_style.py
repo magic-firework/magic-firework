@@ -25,6 +25,7 @@ THRESHOLDS = {
     "table_ratio": 0.25,
     "bold_per_1k": 8,
     "arrows": 3,
+    "em_dash": 2,
 }
 
 # 逐文件覆盖：键是相对仓库根的路径，值是 THRESHOLDS 的子集。
@@ -33,6 +34,14 @@ THRESHOLDS = {
 LIMITS: dict[str, dict] = {
     "constraints.md": {"table_ratio": 0.45},
     "comments.md": {"table_ratio": 0.40},
+    # 历史快照（constraints.md §3）：评审记录只增不改，不参与现行预算。
+    "docs/engineering-review.md": {
+        "cjk": 7200,
+        "table_ratio": 0.60,
+        "bold_per_1k": 18,
+        "arrows": 25,
+        "em_dash": 40,
+    },
 }
 
 # 默认检查范围：文件或目录，不存在的只提示不报错。
@@ -44,7 +53,6 @@ FACTS: dict[str, str] = {}
 
 SKIP_DIRS = {"third_party", "vendor", "generated", "dist", "build", "out", "node_modules", ".git"}
 MAX_PARAGRAPH_LINES = 4
-MAX_EM_DASH = 2
 
 # 装饰性措辞：出现即违规，除非能给出判据（那就改写，而不是加豁免）。
 BANNED = [
@@ -79,12 +87,30 @@ def cjk(text: str) -> int:
     return len(re.findall(r"[\u4e00-\u9fff]", text))
 
 
+def volume(text: str) -> int:
+    """汉字按字计、拉丁文按字母计，密度才可跨语言比较；用 cjk 做分母会让英文文档恒红。"""
+    return cjk(text) + len(re.findall(r"[A-Za-z]", text))
+
+
+def prose_lines(text: str) -> list[str]:
+    """同 body_lines，但把空行留成空串，供 paragraphs 识别段落断点。"""
+    out, in_fence = [], False
+    for line in text.splitlines():
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            out.append(line if line.strip() else "")
+    return out
+
+
 def paragraphs(lines: list[str]) -> list[list[str]]:
-    """连续非空、非标题、非表格、非列表的行视为一段。"""
+    """空行、标题、表格、列表、缩进行都是段落断点。"""
     paras, cur = [], []
     for line in lines:
         solid = (
-            LIST_RE.match(line)
+            not line
+            or LIST_RE.match(line)
             or line.lstrip().startswith(("|", "#", ">"))
             or line[:1].isspace()
         )
@@ -108,14 +134,15 @@ def check_file(limits: dict, text: str) -> list[str]:
     table = sum(1 for l in lines if l.lstrip().startswith("|")) / max(len(lines), 1)
     if table > limits["table_ratio"]:
         bad.append(f"表格占非空行 {table:.0%} > {limits['table_ratio']:.0%}：改用句子写因果")
-    density = bold * 1000 / max(c, 1)
+    density = bold * 1000 / max(volume(text), 1)
     if density > limits["bold_per_1k"]:
         bad.append(f"加粗密度 {density:.1f}/千字 > {limits['bold_per_1k']}：加粗只留标题级重点")
     arrows = text.count("→")
     if arrows > limits["arrows"]:
         bad.append(f"箭头 {arrows} 个 > {limits['arrows']}：流程写成一两句，或改用编号")
-    if text.count("——") > MAX_EM_DASH:
-        bad.append(f"破折号 {text.count('——')} > {MAX_EM_DASH}：删掉修辞性插入")
+    dashes = text.count("——")
+    if dashes > limits["em_dash"]:
+        bad.append(f"破折号 {dashes} > {limits['em_dash']}：删掉修辞性插入")
 
     prose = [CODE_SPAN.sub("", line) for line in text.splitlines()]
     for word in BANNED:
@@ -123,7 +150,7 @@ def check_file(limits: dict, text: str) -> list[str]:
             if word in line:
                 bad.append(f"禁用措辞「{word}」 行 {i}：删掉或换成判据")
 
-    for para in paragraphs(lines):
+    for para in paragraphs(prose_lines(text)):
         if len(para) > MAX_PARAGRAPH_LINES:
             bad.append(f"段落 {len(para)} 行 > {MAX_PARAGRAPH_LINES}：行 {para[0][:24]}…")
 
