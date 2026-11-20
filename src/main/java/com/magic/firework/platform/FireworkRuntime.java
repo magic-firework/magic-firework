@@ -54,6 +54,11 @@ public final class FireworkRuntime {
 		plans.clear();
 	}
 
+	/** Bind the persistent light ledger and clean up blocks a previous run left behind. */
+	public void bindLights() {
+		lights.bind(server);
+	}
+
 	/** The library document changed: drop cached shows and their baked plans. */
 	public void invalidateLibrary() {
 		content.invalidateLibrary();

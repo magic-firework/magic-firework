@@ -48,6 +48,7 @@ public class MagicFirework implements ModInitializer {
 			FireworkRuntime runtime = RuntimeRegistry.current();
 			if (runtime != null) {
 				runtime.bindLibrary(openLibrary(server));
+				runtime.bindLights();
 			}
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

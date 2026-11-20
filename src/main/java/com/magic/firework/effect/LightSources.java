@@ -8,8 +8,10 @@ import java.util.Map;
 import com.magic.firework.config.FireworkLimits;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
 /**
@@ -17,10 +19,44 @@ import net.minecraft.world.level.block.Blocks;
  * removes it again. Only ever touches air, so it cannot destroy terrain.
  *
  * <p>One instance per runtime: the placed-block map is no longer a static that survives a
- * world switch. {@link #clear()} runs when the runtime closes.
+ * world switch. A {@link LightLedger} mirrors every placement into the world save, so a crash
+ * is cleaned up on the next start; {@link #clear()} runs when the runtime closes.
  */
 public final class LightSources {
 	private final Map<ServerLevel, Map<BlockPos, Long>> placed = new IdentityHashMap<>();
+	private LightLedger ledger;
+
+	/**
+	 * Adopt the world's ledger and remove every light block a previous run left behind.
+	 * Runs once the server is started, when the levels exist.
+	 */
+	public void bind(MinecraftServer server) {
+		this.ledger = LightLedger.get(server);
+		recover(server);
+	}
+
+	/** @return how many leftover light blocks were removed */
+	public int recover(MinecraftServer server) {
+		LightLedger current = ledger;
+		if (current == null) {
+			return 0;
+		}
+		int removed = 0;
+		for (Map.Entry<ResourceKey<Level>, Map<BlockPos, Long>> entry : current.entries().entrySet()) {
+			ServerLevel level = server.getLevel(entry.getKey());
+			if (level == null) {
+				continue;
+			}
+			for (BlockPos pos : entry.getValue().keySet()) {
+				if (level.getBlockState(pos).is(Blocks.LIGHT)) {
+					level.removeBlock(pos, false);
+					removed++;
+				}
+			}
+		}
+		current.clear();
+		return removed;
+	}
 
 	public void light(ServerLevel level, BlockPos pos, int ticks) {
 		if (!FireworkLimits.allowLightBlocks || ticks <= 0) {
@@ -33,8 +69,12 @@ public final class LightSources {
 		if (blocks.containsKey(pos)) {
 			return;
 		}
-		blocks.put(pos.immutable(), level.getGameTime() + ticks);
+		long until = level.getGameTime() + ticks;
+		blocks.put(pos.immutable(), until);
 		level.setBlockAndUpdate(pos, Blocks.LIGHT.defaultBlockState());
+		if (ledger != null) {
+			ledger.put(level.dimension(), pos, until);
+		}
 	}
 
 	/** Called once per server tick to restore the blocks whose light expired. */
@@ -55,6 +95,9 @@ public final class LightSources {
 				if (level.getBlockState(block.getKey()).is(Blocks.LIGHT)) {
 					level.removeBlock(block.getKey(), false);
 				}
+				if (ledger != null) {
+					ledger.remove(level.dimension(), block.getKey());
+				}
 				blocks.remove();
 			}
 			if (entry.getValue().isEmpty()) {
@@ -64,6 +107,17 @@ public final class LightSources {
 	}
 
 	public void clear() {
+		for (Map.Entry<ServerLevel, Map<BlockPos, Long>> entry : placed.entrySet()) {
+			ServerLevel level = entry.getKey();
+			for (BlockPos pos : entry.getValue().keySet()) {
+				if (level.getBlockState(pos).is(Blocks.LIGHT)) {
+					level.removeBlock(pos, false);
+				}
+			}
+		}
 		placed.clear();
+		if (ledger != null) {
+			ledger.clear();
+		}
 	}
 }
