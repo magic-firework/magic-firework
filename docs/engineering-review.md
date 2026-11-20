@@ -17,9 +17,9 @@
 | B1 | 完成（ENG-04 的运行期断言留 B3） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` | 4 个提交各自 `./gradlew test` 通过 |
 | B2 | 完成 | `cc32bf7` `77dd3e7` | `SchemaParityTest` + 共享夹具 + `check_docs.py`；Python 32/32、3 个坏夹具被拒、边界夹具通过 |
 | B3 | 部分（门禁/可复现完成；运行期冒烟未完成） | `abb4376` `61b1afe` `217be80` `77874d9` `d150e66` | Spotless/ErrorProne/JaCoCo/锁定/校验/版本已落；干净 clone 的 `build --offline` 通过 |
-| B4 | 未开始 | — | — |
+| B4 | 部分（5/7；ENG-08/10 未开始） | `61ff4f4` `a8de33b` `99a9df3` `a65eb67` `161d545` | ENG-09/14/15/16/18 完成；`check` 通过 |
 
-当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build --offline` 在干净 clone 中通过；`./gradlew check`（含 Spotless、ErrorProne `-Werror`、JaCoCo）通过；`./gradlew test` 共 **179** 个测试、0 失败；instruction coverage **46.3%**，阈值 45%；Python 32/32、坏夹具被拒、`check_docs.py` 通过。
+当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build --offline` 在干净 clone 中通过；`./gradlew check`（含 Spotless、ErrorProne `-Werror`、JaCoCo）通过；`./gradlew test` 共 **194** 个测试、0 失败；instruction coverage **47.8%**，阈值 45%；Python 32/32、坏夹具被拒、`check_docs.py` 通过。
 
 运行期观察：`./gradlew runServer` 已走到 `firework runtime started` 与内容加载，世界生成超过本地超时（无崩溃栈）；B3 的 light/pending 冒烟断言仍未完成。
 
@@ -593,7 +593,9 @@ assert lightSources.placedCount(DIM) == 0;
 - **范围**：ENG-08、ENG-09、ENG-10、ENG-14、ENG-15、ENG-16、ENG-18。ENG-18 的队列上限、维度 key、卸载释放属于本批；B3 只做“重启后 light=0 / 卸载后条目=0”的冒烟断言。
 - **进入条件**：B1、B3 完成；覆盖率基线与格式门禁已生效。
 - **动作**：拆 `FireworkEditorScreen`；抽 `JsonResourceLoader`；运行时注入；`FireworkConfig`；一次编码多播 + `Plan.truncated` 不入缓存；布尔规范化 + 128-bit 身份；pending 上限与维度卸载释放。
-- **退出条件**：ENG-08/09/10/14/15/16/18 的判定式全绿；`spotlessCheck` 通过；覆盖率不低于 B3 基线（每批 +5% 的目标在 B4 结束时仍成立）；`DataPackTest` 行为不变。- **依赖**：B3（Spotless/覆盖率/冒烟）、B1（先修正确性再重构）、B2（文档 token 不受重构影响）。
+- **执行结果（部分）**：ENG-09（`JsonResourceLoader`，两个 loader 32 + 78 行）、ENG-14（`config/magic-firework.json` + `FireworkConfig`）、ENG-15（一次编码 + `Plan.truncated` 不入缓存）、ENG-16（布尔规范化 + SHA-256 128-bit 身份）、ENG-18（pending 1024 + 维度 id + 卸载释放）完成。ENG-08（编辑器拆分）与 ENG-10（运行时注入）未开始。
+- **退出条件**：ENG-08/09/10/14/15/16/18 的判定式全绿；`spotlessCheck` 通过；覆盖率不低于 B3 基线（每批 +5% 的目标在 B4 结束时仍成立）；`DataPackTest` 行为不变。**已满足：09/14/15/16/18；未满足：08/10；覆盖率 47.8%（B3 46.3%，B4 目标 50% 未到）。**
+- **依赖**：B3（Spotless/覆盖率/冒烟）、B1（先修正确性再重构）、B2（文档 token 不受重构影响）。
 
 ---
 
@@ -639,11 +641,13 @@ assert lightSources.placedCount(DIM) == 0;
 7. **ENG-06 选“新增 `docs/content-format.md`（英文）”**；被否 A：“恢复 README 的 `## Programs`”——入口页会被 63 行语义淹没，且 README 已明确只留 requirements/build/license；被否 B：“只写注释”——没有任何检查能拦住再次删除。
 8. **ENG-08 选“Eclipse formatter profile（tab、120 列）+ Spotless，ratchet 自 `9493d51`”**；被否：“google-java-format”——会把全库 tab 改成空格，产生 85 文件的纯格式 diff，破坏 blame。补充：一次性 Eclipse 全库格式化仍会改 30 个文件/约 2000 行，因此改为 ratchet；B4 触碰旧文件时再格式化。
 9. **ENG-12 选“Loom pin 到实施时的最新 release + 依赖锁定 + 校验元数据 + tag 驱动版本”**；被否 A：继续 `-SNAPSHOT`——不可复现；被否 B：手写 `1.0.0`——发布版本与 tag 脱节。校验元数据对 Loom 本地 remap 的 `remapped.net.fabricmc.fabric-api` group 使用 `trusted-artifacts`（生成物没有稳定的发布校验和）；其余依赖仍校验 SHA-256。
-10. **ENG-14 选 `config/magic-firework.json`，缺文件即默认、不写文件**；被否 A：环境变量/系统属性——运维不可发现；被否 B：每世界配置——安全上限必须在世界加载前就生效。
-11. **ENG-03 的客户端预算 = 4096 点/tick**（服务端全局 8192 的一半）；被否 A：直接复用 8192——客户端峰值会与服务器峰值叠加；被否 B：不设预算——信任边界不完整。ENG-15 只做同一常量的交叉断言，不另设第二个预算。
-12. **ENG-18 的 pending 上限 = 1024 条**；被否 A：无界——内存可被长 show 放大；被否 B：只靠 TTL——到期前仍持有维度引用。
-13. **覆盖率阈值 = 45% instruction（B2 基线 46.3%），B4 目标 +5% 到 50%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
+10. **ENG-14 选 `config/magic-firework.json`，缺文件即默认、不写文件**；可调字段为 `maxChildren`、`maxDepth`、`maxSpeed`、`allowLightBlocks`、`maxPointsPerShow`、`maxPointsPerTick`，结构性上限保持编译期；被否 A：环境变量/系统属性——运维不可发现；被否 B：每世界配置——安全上限必须在世界加载前就生效。
+11. **ENG-03 的客户端预算 = 4096 点/tick**（服务端全局 8192 的一半，已落地）；被否 A：直接复用 8192——客户端峰值会与服务器峰值叠加；被否 B：不设预算——信任边界不完整。ENG-15 只做同一常量的交叉断言，不另设第二个预算。
+12. **ENG-18 的 pending 上限 = 1024 条**（已落地；队列存 dimension id，不存 `ServerLevel`）；被否 A：无界——内存可被长 show 放大；被否 B：只靠 TTL——到期前仍持有维度引用。
+13. **覆盖率阈值 = 45% instruction（B2 基线 46.3%，B4 当前 47.8%），B4 目标 +5% 到 50%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
 14. **严重度口径**：P0 行为错误/信任边界；P1 契约/文档/可验证性；P2 结构/工程化/性能。被否：按“改动行数”排序——与用户风险无关。
 15. **标签**：`p0/p1/p2` + `area:network|content|docs|build|client|world|craft|platform|test|config`；里程碑 B0–B4。被否：按文件路径打标签——跨层问题会被拆散。
 16. **语言**：报告正文中文，代码标识符/路径/命令/新文档 `docs/content-format.md` 保持英文。被否：报告英文——团队沟通语言是中文；文档中文——与 README/代码注释不一致。
-17. **“无开放决策”**：第 3 章的“已锁定方向”即决策；被否方案只出现在本章，正文不保留未决选项。
+17. **ENG-16 选 SHA-256 前 128 位作为 Inline 摘要 + 布尔键规范化**；被否：继续 64-bit FNV——身份空间不足；把全部 0/1 数字都规范化——会破坏非布尔属性。
+18. **ENG-15 选一次编码为 `byte[]` 后多播**；被否：每个玩家复制 `FriendlyByteBuf`——仍会重复序列化。
+19. **“无开放决策”**：第 3 章的“已锁定方向”即决策；被否方案只出现在本章，正文不保留未决选项。
