@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -40,7 +41,7 @@ public final class ContentLibrary {
 	private final TagWriter writer;
 	private final Map<Id, Entry> entries = new LinkedHashMap<>();
 	/** Bumped on every load/save/delete so caches can invalidate by cheap comparison. */
-	private volatile long version;
+	private final AtomicLong version = new AtomicLong();
 
 	public ContentLibrary(Path root) {
 		this(root, DEFAULT_MAX_PER_AUTHOR);
@@ -78,7 +79,7 @@ public final class ContentLibrary {
 		if (!Files.isDirectory(root)) {
 			return;
 		}
-			try (Stream<Path> files = Files.list(root)) {
+		try (Stream<Path> files = Files.list(root)) {
 			for (Path file : files.toList()) {
 				String name = file.getFileName().toString();
 				if (!name.endsWith(".nbt")) {
@@ -102,12 +103,12 @@ public final class ContentLibrary {
 				entries.put(id, new Entry(id, tag.getUUID("author"), tag.getLong("created"), document));
 			}
 		}
-		version++;
+		version.incrementAndGet();
 	}
 
 	/** Bumped whenever the set of documents changes; caches compare it instead of listening. */
 	public long version() {
-		return version;
+		return version.get();
 	}
 
 	public Set<Id> ids() {
@@ -152,7 +153,7 @@ public final class ContentLibrary {
 				document);
 		write(entry);
 		entries.put(id, entry);
-		version++;
+		version.incrementAndGet();
 		return entry;
 	}
 
@@ -167,7 +168,7 @@ public final class ContentLibrary {
 		}
 		Files.deleteIfExists(file(id));
 		entries.remove(id);
-		version++;
+		version.incrementAndGet();
 		return true;
 	}
 
