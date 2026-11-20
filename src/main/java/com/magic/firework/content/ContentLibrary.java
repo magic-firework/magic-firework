@@ -3,6 +3,8 @@ package com.magic.firework.content;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +36,8 @@ public final class ContentLibrary {
 
 	private final Path root;
 	private final int maxPerAuthor;
+	private final Clock clock;
+	private final TagWriter writer;
 	private final Map<Id, Entry> entries = new LinkedHashMap<>();
 	/** Bumped on every load/save/delete so caches can invalidate by cheap comparison. */
 	private volatile long version;
@@ -43,8 +47,23 @@ public final class ContentLibrary {
 	}
 
 	public ContentLibrary(Path root, int maxPerAuthor) {
+		this(root, maxPerAuthor, Clock.systemUTC());
+	}
+
+	public ContentLibrary(Path root, int maxPerAuthor, Clock clock) {
+		this(root, maxPerAuthor, clock, ContentLibrary::writeNbt);
+	}
+
+	ContentLibrary(Path root, int maxPerAuthor, Clock clock, TagWriter writer) {
 		this.root = root;
 		this.maxPerAuthor = Math.max(1, maxPerAuthor);
+		this.clock = clock == null ? Clock.systemUTC() : clock;
+		this.writer = writer == null ? ContentLibrary::writeNbt : writer;
+	}
+
+	@FunctionalInterface
+	interface TagWriter {
+		void write(CompoundTag tag, Path path) throws IOException;
 	}
 
 	public record Entry(Id id, UUID author, long created, CompoundTag document) {
@@ -129,7 +148,7 @@ public final class ContentLibrary {
 		if (existing == null && count(author) >= maxPerAuthor) {
 			throw new IllegalStateException("library quota of " + maxPerAuthor + " entries per author is spent");
 		}
-		Entry entry = new Entry(id, author, existing == null ? System.currentTimeMillis() : existing.created(),
+		Entry entry = new Entry(id, author, existing == null ? clock.millis() : existing.created(),
 				document);
 		write(entry);
 		entries.put(id, entry);
@@ -168,11 +187,27 @@ public final class ContentLibrary {
 
 	private void write(Entry entry) throws IOException {
 		Files.createDirectories(root);
+		Path target = file(entry.id());
+		Path temp = target.resolveSibling(target.getFileName() + ".tmp");
 		CompoundTag tag = new CompoundTag();
 		tag.putUUID("author", entry.author());
 		tag.putLong("created", entry.created());
 		tag.put("document", entry.document());
-		NbtIo.write(tag, file(entry.id()).toFile());
+		try {
+			writer.write(tag, temp);
+			Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | RuntimeException exception) {
+			try {
+				Files.deleteIfExists(temp);
+			} catch (IOException cleanup) {
+				exception.addSuppressed(cleanup);
+			}
+			throw exception;
+		}
+	}
+
+	private static void writeNbt(CompoundTag tag, Path path) throws IOException {
+		NbtIo.write(tag, path.toFile());
 	}
 
 	private Path file(Id id) {
