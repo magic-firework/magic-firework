@@ -35,6 +35,24 @@ public final class LightSources {
 		recover(server);
 	}
 
+	/** Drop a dimension that is going away; remove its live blocks and ledger rows. */
+	public void onDimensionUnload(ResourceKey<Level> dimension) {
+		placed.entrySet().removeIf(entry -> {
+			if (!entry.getKey().dimension().equals(dimension)) {
+				return false;
+			}
+			for (BlockPos pos : entry.getValue().keySet()) {
+				if (entry.getKey().getBlockState(pos).is(Blocks.LIGHT)) {
+					entry.getKey().removeBlock(pos, false);
+				}
+				if (ledger != null) {
+					ledger.remove(dimension, pos);
+				}
+			}
+			return true;
+		});
+	}
+
 	/** @return how many leftover light blocks were removed */
 	public int recover(MinecraftServer server) {
 		LightLedger current = ledger;

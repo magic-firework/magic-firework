@@ -15,6 +15,7 @@ import com.magic.firework.recipe.ModRecipes;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -58,6 +59,12 @@ public class MagicFirework implements ModInitializer {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(RuntimeRegistry::stop);
+		ServerWorldEvents.UNLOAD.register((server, world) -> {
+			FireworkRuntime runtime = RuntimeRegistry.current();
+			if (runtime != null) {
+				runtime.onDimensionUnload(world.dimension());
+			}
+		});
 
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES)
 				.register(entries -> {

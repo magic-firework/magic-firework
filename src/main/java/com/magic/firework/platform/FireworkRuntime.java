@@ -59,6 +59,12 @@ public final class FireworkRuntime {
 		lights.bind(server);
 	}
 
+	/** Drop queued effects and light records for a dimension that is going away. */
+	public void onDimensionUnload(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension) {
+		scheduled.onDimensionUnload(dimension.location());
+		lights.onDimensionUnload(dimension);
+	}
+
 	/** The library document changed: drop cached shows and their baked plans. */
 	public void invalidateLibrary() {
 		content.invalidateLibrary();

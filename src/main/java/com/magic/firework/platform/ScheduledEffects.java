@@ -4,12 +4,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.magic.firework.config.FireworkLimits;
 import com.magic.firework.core.eval.Plan;
 import com.magic.firework.core.show.EventSpec;
 import com.magic.firework.effect.LightSources;
 import com.magic.firework.effect.Sounds;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -19,22 +22,34 @@ import net.minecraft.world.phys.Vec3;
  * Server-side scheduler for the non-visual part of a baked plan (sounds, temporary lights).
  *
  * <p>One instance per runtime: the pending list is dropped with the server, so a stopped or
- * switched world cannot leave its {@link ServerLevel} references behind.
+ * switched world cannot leave its {@link ServerLevel} references behind. Entries keep the
+ * dimension id, not the level, and the list has a hard cap; a dimension unload drops its
+ * entries immediately instead of waiting for their tick.
  */
 public final class ScheduledEffects {
 	private final LightSources lights;
 	private final List<Pending> pending = new ArrayList<>();
+	private int dropped;
 
 	public ScheduledEffects(LightSources lights) {
 		this.lights = lights;
 	}
 
 	public void schedule(ServerLevel level, Vec3 origin, List<Plan.ScheduledEvent> events, long now) {
+		schedule(level.dimension().location(), origin, events, now);
+	}
+
+	/** Test seam: the queue only needs a dimension id, not a live level. */
+	void schedule(ResourceLocation dimension, Vec3 origin, List<Plan.ScheduledEvent> events, long now) {
 		if (events == null || events.isEmpty()) {
 			return;
 		}
 		for (Plan.ScheduledEvent event : events) {
-			pending.add(new Pending(level, now + (long) event.time(), event, origin));
+			if (pending.size() >= FireworkLimits.maxPendingEffects) {
+				dropped++;
+				continue;
+			}
+			pending.add(new Pending(dimension, now + (long) event.time(), event, origin));
 		}
 	}
 
@@ -44,24 +59,41 @@ public final class ScheduledEffects {
 		}
 		for (Iterator<Pending> iterator = pending.iterator(); iterator.hasNext();) {
 			Pending entry = iterator.next();
-			if (entry.level().getGameTime() < entry.at()) {
+			ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, entry.dimension()));
+			if (level == null) {
+				iterator.remove();
+				dropped++;
+				continue;
+			}
+			if (level.getGameTime() < entry.at()) {
 				continue;
 			}
 			iterator.remove();
-			entry.play(lights);
+			entry.play(level, lights);
 		}
+	}
+
+	/** Drop everything queued for a dimension that is going away. */
+	public void onDimensionUnload(ResourceLocation dimension) {
+		pending.removeIf(entry -> entry.dimension().equals(dimension));
 	}
 
 	public void clear() {
 		pending.clear();
+		dropped = 0;
 	}
 
 	public int size() {
 		return pending.size();
 	}
 
-	private record Pending(ServerLevel level, long at, Plan.ScheduledEvent event, Vec3 origin) {
-		private void play(LightSources lights) {
+	/** @return events dropped because the queue was full or the dimension disappeared */
+	public int dropped() {
+		return dropped;
+	}
+
+	private record Pending(ResourceLocation dimension, long at, Plan.ScheduledEvent event, Vec3 origin) {
+		private void play(ServerLevel level, LightSources lights) {
 			Vec3 position = origin.add(toMinecraft(event.at()));
 			if (event.kind() == EventSpec.Kind.SOUND && event.target() != null) {
 				ResourceLocation sound = ResourceLocation.tryParse(event.target().toString());

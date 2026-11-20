@@ -59,6 +59,8 @@ public final class FireworkLimits {
 	public static final int maxWaitTicks = 400;
 	/** Maximum instructions executed per rocket per tick. */
 	public static final int maxOpsPerTick = 256;
+	/** Hard cap on pending scheduled effects across every dimension. */
+	public static final int maxPendingEffects = 1024;
 	/** Whether the {@code light} op may place light blocks in the world. */
 	public static final boolean allowLightBlocks = true;
 	/** Upper bound of points a single baked stroke show may emit. */
