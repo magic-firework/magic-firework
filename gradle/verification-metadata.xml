@@ -5,6 +5,8 @@
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
          <trust group="remapped.net.fabricmc.fabric-api" reason="Loom remaps Fabric API locally; the JARs are generated, not published artifacts"/>
+         <trust group="loom" reason="Loom builds the layered mappings jar from the official mappings on the machine that runs the build; the bytes follow the toolchain, so a pinned hash only holds on one machine"/>
+         <trust group="net.minecraft" reason="Loom generates the remapped Minecraft jars locally from the official mappings; same reason as the fabric-api and mappings entries"/>
       </trusted-artifacts>
    </configuration>
    <components>
