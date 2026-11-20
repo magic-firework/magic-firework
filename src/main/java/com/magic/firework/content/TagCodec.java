@@ -14,6 +14,7 @@ import com.magic.firework.core.shape.Form;
 import com.magic.firework.core.shape.Ink;
 import com.magic.firework.core.show.EventSpec;
 import com.magic.firework.core.show.Show;
+import com.magic.firework.core.show.Spark;
 import com.magic.firework.core.show.Stamp;
 
 import net.minecraft.nbt.ByteArrayTag;
@@ -117,7 +118,26 @@ public final class TagCodec {
 		double thickness = object.get("thickness") == null ? 0.0 : number(object.get("thickness"));
 		double jitter = object.get("jitter") == null ? 0.0 : number(object.get("jitter"));
 		List<EventSpec> events = events(object.get("events"), showId, where);
-		return new Stamp(form, at, duration, path, place, size, thickness, jitter, events);
+		Spark spark = object.get("spark") == null ? null : spark(object.get("spark"), showId, where);
+		return new Stamp(form, at, duration, path, place, size, thickness, jitter, events, spark);
+	}
+
+	private static Spark spark(Tag json, Id showId, String where) throws CodecException {
+		CompoundTag object = object(json, "show " + showId + ": " + where + ".spark");
+		return new Spark(
+				object.get("speed") == null ? Spark.DEFAULT_SPEED : number(object.get("speed")),
+				object.get("speedSpread") == null ? Spark.DEFAULT_SPEED_SPREAD : number(object.get("speedSpread")),
+				object.get("directionSpread") == null ? Spark.DEFAULT_DIRECTION_SPREAD
+						: number(object.get("directionSpread")),
+				integer(object, "lifetime", Spark.DEFAULT_LIFETIME),
+				integer(object, "lifetimeSpread", Spark.DEFAULT_LIFETIME_SPREAD),
+				bool(object, "trail", false),
+				bool(object, "flicker", false),
+				bool(object, "flash", true),
+				bool(object, "normalize", true),
+				bool(object, "atOrigin", true),
+				ints(object, "colors"),
+				ints(object, "fadeColors"));
 	}
 
 	// ── form ────────────────────────────────────────────────────────────────
@@ -290,6 +310,11 @@ public final class TagCodec {
 	private static int integer(CompoundTag object, String key, int fallback) {
 		Tag value = object.get(key);
 		return value instanceof NumericTag number ? number.getAsInt() : fallback;
+	}
+
+	private static boolean bool(CompoundTag object, String key, boolean fallback) {
+		Tag value = object.get(key);
+		return value instanceof NumericTag number ? number.getAsByte() != 0 : fallback;
 	}
 
 	private static double number(Tag tag) throws CodecException {

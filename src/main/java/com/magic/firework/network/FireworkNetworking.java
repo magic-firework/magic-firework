@@ -31,7 +31,7 @@ import net.minecraft.world.phys.Vec3;
  * drops the packet instead of misreading it.
  */
 public final class FireworkNetworking {
-	public static final int PROTOCOL_VERSION = 3;
+	public static final int PROTOCOL_VERSION = 4;
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");

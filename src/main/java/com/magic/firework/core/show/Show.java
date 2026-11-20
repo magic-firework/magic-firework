@@ -42,6 +42,9 @@ public record Show(Id id, int[] palette, List<Stamp> stamps) {
 			if (stamp.thickness() > 0.0 || stamp.jitter() > 0.0) {
 				return true;
 			}
+			if (stamp.spark() != null && stamp.spark().seedSensitive()) {
+				return true;
+			}
 		}
 		return false;
 	}

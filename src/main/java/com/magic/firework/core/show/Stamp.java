@@ -12,6 +12,9 @@ import com.magic.firework.core.shape.Form;
  * <p>The shape itself lives in a {@link Form} tree; a stamp only says how that tree is
  * placed and when it appears. Everything the evaluator needs is in this one record, so the
  * bottom-level loop stays a loop.
+ *
+ * <p>{@link #spark()} is optional. Without it every point is a static puff at its baked position;
+ * with it each point becomes a vanilla firework spark carrying its own velocity and lifetime.
  */
 public record Stamp(
 		Form form,
@@ -22,7 +25,8 @@ public record Stamp(
 		double size,
 		double thickness,
 		double jitter,
-		List<EventSpec> events) {
+		List<EventSpec> events,
+		Spark spark) {
 
 	public Stamp {
 		if (form == null) {
@@ -38,12 +42,19 @@ public record Stamp(
 		events = events == null ? List.of() : List.copyOf(events);
 	}
 
+	/** A static stamp, kept for callers that predate {@link Spark}. */
+	public Stamp(Form form, int at, int duration, Path path, Transform place, double size,
+			double thickness, double jitter, List<EventSpec> events) {
+		this(form, at, duration, path, place, size, thickness, jitter, events, null);
+	}
+
 	public static Stamp of(Form form) {
-		return new Stamp(form, 0, 0, null, null, 1.0, 0.0, 0.0, null);
+		return new Stamp(form, 0, 0, null, null, 1.0, 0.0, 0.0, null, null);
 	}
 
 	@Override
 	public String toString() {
-		return "Stamp[" + form + ", at=" + at + ", duration=" + duration + "]";
+		return "Stamp[" + form + ", at=" + at + ", duration=" + duration
+				+ (spark == null ? "" : ", " + spark) + "]";
 	}
 }
