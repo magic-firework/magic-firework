@@ -1,11 +1,27 @@
 # Magic Firework 工程问题诊断报告
 
-> 交付物：本文件。本轮不修改 `src/`、构建脚本或 CI，只登记问题、锁定处理方向与验收式，供后续按批次拆分 issue。
+> 本文件是评审报告：评审轮不改源码、构建脚本或 CI。执行阶段（B0–B2）的提交与验证见顶部“执行状态”，问题登记册与路线图保留评审时的口径。
 
 - 评审基线：`HEAD = 28cc133`（`fix(fabric.mod.json): use English punctuation in the description`）
-- 工作区状态：`git status --porcelain` 为 **14 个已修改 + 9 个未跟踪**；`git diff --stat` 为 14 files changed, 458 insertions(+), 59 deletions(-)
+- 评审时工作区状态：`git status --porcelain` 为 **14 个已修改 + 9 个未跟踪**；`git diff --stat` 为 14 files changed, 458 insertions(+), 59 deletions(-)
 - 问题总数：**18**（P0 5 条、P1 4 条、P2 9 条）
 - 批次：**B0–B4**，见第 4 章
+
+## 执行状态（本轮）
+
+评审后的工作区（14 M + 9 ??）已经落成 3 个功能提交，当前分支为 `content/retune-flight-speeds`，工作区干净。
+
+| 批次 | 状态 | 提交 | 验证 |
+|---|---|---|---|
+| B0 | 完成 | `34e2170` `b505a94` `f17097b` `b5671bb` `b4fb2b0` | 3 个功能提交各自 `./gradlew test` 通过；读侧上限与校验同提交 |
+| B1 | 完成（ENG-04 的运行期断言留 B3） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` | 4 个提交各自 `./gradlew test` 通过 |
+| B2 | 完成 | `cc32bf7` `77dd3e7` | `SchemaParityTest` + 共享夹具 + `check_docs.py`；Python 32/32、3 个坏夹具被拒、边界夹具通过 |
+| B3 | 部分 | `abb4376` | Loom `1.19.4` pin 与 `.editorconfig` 已落；Spotless/ErrorProne/JaCoCo/依赖锁定/运行期冒烟待做 |
+| B4 | 未开始 | — | — |
+
+当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build` 通过；`./gradlew test` 共 **179** 个测试、0 失败。
+
+观察：开启 configuration cache 时曾出现 `EOFException` / `NoSuchFileException`（`build/test-results/test/binary/...`），改用 `--no-configuration-cache` 后稳定；CI 默认仍开启，B3 应观察或关闭缓存以排除测试结果写入竞争。§1.3 的“未执行”项指评审时状态，执行阶段已补上 `build`/`test`，但未启动客户端/专用服务器。
 
 ---
 
@@ -42,7 +58,7 @@
 
 ### 1.3 未验证项（明确声明）
 
-- **未执行 `./gradlew build`**：本机只有 JDK 17（`openjdk 17.0.20.1`），而 CI 注释与 Loom 1.19 要求构建 JVM 为 **JDK 25**（`.github/workflows/build.yml:33-36`）。因此本报告不声称任何测试通过。
+- **评审时未执行 `./gradlew build`**：当时只有 JDK 17（`openjdk 17.0.20.1`），而 CI 注释与 Loom 1.19 要求构建 JVM 为 **JDK 25**（`.github/workflows/build.yml:33-36`）。执行阶段已在 JDK 25 上跑通 `build` 与 `test`（见“执行状态”），本节其余未验证项仍成立。
 - **未启动客户端或专用服务器**，未执行 Fabric GameTest；所有涉及世界状态、粒子、网络收发的结论均为静态阅读加 schema 探测。
 - **未做性能实测**：ENG-15 的“每 tick 点数”“序列化次数”是按代码路径计数，不是毫秒级 benchmark。
 - **未审计 Fabric API / Loom 兼容矩阵**：ENG-12 只锁定可复现性，不评估版本升级风险。
@@ -535,21 +551,21 @@ assert lightSources.placedCount(DIM) == 0;
 
 ### B0 · 工作区落盘与测试可见性
 
-- **范围**：ENG-13；首批 3 条可见测试：`CloudProtocol` 读侧上限、`FrameStream` 的 spark/flash 覆盖、`VanillaFireworkShowTest` 入库。
+- **范围**：ENG-13；首批 3 条可见测试：`CloudProtocol` 读侧上限（与校验同提交）、`FrameStream` 的 spark/flash 覆盖、`VanillaFireworkShowTest` 入库。
 - **进入条件**：当前工作区（14 M + 9 ??）为唯一代码状态；`VanillaFireworkShowTest` 已写好但未跟踪。
-- **动作**：按 ENG-13 的 3 个原子提交落盘；把已写好的 `CloudProtocol` spark/flash 往返测试一并提交，并在 `FrameStreamTest` 补 spark 字段保留 + flash 时间排序；新增读侧上限测试；把 `VanillaFireworkShowTest` 随数据提交。
+- **动作**：按 ENG-13 的 3 个原子提交落盘；把已写好的 `CloudProtocol` spark/flash 往返测试一并提交，并在 `FrameStreamTest` 补 spark 字段保留 + flash 时间排序；新增读侧上限测试并在同一次提交里落地 `CloudProtocol.read` 校验（ENG-03 的读侧部分）；把 `VanillaFireworkShowTest` 随数据提交。
 - **退出条件**：
   - `git status --porcelain` 为空；
   - `git log --format=%s -3` 为 3 条 Conventional Commits；
   - 在 JDK 25 环境（或 CI）对 3 个提交逐个执行 `./gradlew build` 均通过；
   - CI 日志能看到 `VanillaFireworkShowTest` 与 `CloudProtocolReadLimitTest`。
-- **依赖**：无。**阻塞项**：本机 JDK 17 不能代替 JDK 25 做验收。
+- **依赖**：无。评审时 JDK 17 的阻塞已由 JDK 25 解除。
 
 ### B1 · 正确性与信任边界
 
-- **范围**：ENG-01、ENG-03（读侧 + 客户端预算）、ENG-04（单测部分）、ENG-17。
+- **范围**：ENG-01、ENG-03（客户端预算；读侧已在 B0 落地）、ENG-04（单测部分）、ENG-17。
 - **进入条件**：B0 完成，测试已进入 CI。
-- **动作**：修 Javadoc + 抽 `DefinitionLoader.load(Map<..., Tag>)`；`CloudProtocol.read` 上限；`PointBudget`；`LightLedger` + 启动清理 + `close()` 回收；`ContentLibrary` 临时文件 + `Clock`。
+- **动作**：修 Javadoc + 抽 `DefinitionLoader.load(Map<..., Tag>)`；`PointBudget`；`LightLedger` + 启动清理 + `close()` 回收；`ContentLibrary` 临时文件 + `Clock`。
 - **退出条件**：ENG-01/03/04（单测）/17 的判定式全绿；`./gradlew check` 通过；无新增失败测试。
 - **依赖**：B0（测试可见）。ENG-04 的端到端（杀进程/重启、世界内 light 计数）在 B3 冒烟里完成，本批只保证持久化与清理调用存在且可单测。
 
