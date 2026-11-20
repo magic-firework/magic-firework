@@ -14,12 +14,12 @@
 | 批次 | 状态 | 提交 | 验证 |
 |---|---|---|---|
 | B0 | 完成 | `34e2170` `b505a94` `f17097b` `b5671bb` `b4fb2b0` | 3 个功能提交各自 `./gradlew test` 通过；读侧上限与校验同提交 |
-| B1 | 完成（ENG-04 的运行期断言留 B3） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` | 4 个提交各自 `./gradlew test` 通过 |
+| B1 | 完成（ENG-04 运行期断言留 B3；ENG-02 配方集成测试未写） | `eede96a` `11c7a2d` `637d4d0` `cee15b9` `e619db2` | 5 个提交各自 `./gradlew test` 通过 |
 | B2 | 完成 | `cc32bf7` `77dd3e7` | `SchemaParityTest` + 共享夹具 + `check_docs.py`；Python 32/32、3 个坏夹具被拒、边界夹具通过 |
 | B3 | 部分（门禁/可复现完成；运行期冒烟未完成） | `abb4376` `61b1afe` `217be80` `77874d9` `d150e66` | Spotless/ErrorProne/JaCoCo/锁定/校验/版本已落；干净 clone 的 `build --offline` 通过 |
 | B4 | 完成（ENG-10 的 recipe 例外） | `61ff4f4` `a8de33b` `99a9df3` `a65eb67` `161d545` `59063ad` `127122b` | 7/7 项完成；`check` 通过 |
 
-当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build --offline` 在干净 clone 中通过；`./gradlew check`（含 Spotless、ErrorProne `-Werror`、JaCoCo）通过；`./gradlew test` 共 **194** 个测试、0 失败；instruction coverage **47.5%**，阈值 45%；Python 32/32、坏夹具被拒、`check_docs.py` 通过。
+当前验证：JDK 25（`/usr/lib/jvm/java-25-openjdk-amd64`）下 `./gradlew build --offline` 在干净 clone 中通过；`./gradlew check`（含 Spotless、ErrorProne `-Werror`、JaCoCo）通过；`./gradlew test` 共 **196** 个测试、0 失败；instruction coverage **47.4%**，阈值 45%；Python 32/32、坏夹具被拒、`check_docs.py` 通过。
 
 运行期观察：`./gradlew runServer` 已走到 `firework runtime started` 与内容加载，世界生成超过本地超时（无崩溃栈）；B3 的 light/pending 冒烟断言仍未完成。
 
@@ -121,7 +121,7 @@ assertTrue(logCapture.contains(BAD_ID.toString())); // WARN 带 id
 | 归属层 | intent |
 | 证据 | `recipe/ModRecipes.java:13-16`（声称回程“lives in the editor”）；`item/FireworkBlueprintItem.java:30-50`（唯一读取者是 tooltip）；`grep -rn BlueprintCraftingRecipe src` 无命中；`formula cost` 只在 `recipe/BlueprintWritingRecipe.java:79-83` 与 `command/FireworkCommand.java:207` 计算并写进 NBT，`FireworkEditorMenu` 没有任何 blueprint 分支 |
 | 影响 | 玩家花材料写出一张蓝图后，只能看 tooltip；账单永远不扣，蓝图不可兑现。`FormulaCost` 的单测因此只证明“算得对”，不证明“收得走”。 |
-| 已锁定方向 | 补真实消费端：抽 `BlueprintCrafting.craft(writtenBlueprint, inventory)` 纯服务（读 NBT 里的 `source` 与 `cost`，足额则扣材料并返回等值 `RocketSpec`/firework，缺料则拒绝且不动蓝图），由编辑器服务端菜单动作调用；不新增 `BlueprintCraftingRecipe`，与 `ModRecipes` 的“回程不是配方”声明保持一致，并把注释改成指向这个入口。 |
+| 已锁定方向 | 补真实消费端：`BlueprintCrafting.pay(bill, available)` 纯账单服务（足额才扣、原 map 不变），加 `BlueprintCraftingRecipe`：一份 written blueprint + 恰好其冻结账单 → `assemble` 出等值 `RocketSpec`，缺料/多料拒绝；注册为动态 `magic-firework:blueprint_crafting`。原计划的“编辑器动作”被否，因为 1.20.1 的 `assemble` 没有 level/server 句柄。 |
 | 标签 / 里程碑 | `p0` `area:craft` · **B1** |
 
 **判定式（可执行）**
@@ -594,7 +594,7 @@ assert lightSources.placedCount(DIM) == 0;
 - **进入条件**：B1、B3 完成；覆盖率基线与格式门禁已生效。
 - **动作**：拆 `FireworkEditorScreen`；抽 `JsonResourceLoader`；运行时注入；`FireworkConfig`；一次编码多播 + `Plan.truncated` 不入缓存；布尔规范化 + 128-bit 身份；pending 上限与维度卸载释放。
 - **执行结果**：ENG-08（`FireworkEditorScreen` 815→308 行；`EditorLayout`/`EditorSteps`/`EditorText`/`EditorChrome`/`DirectionPreview`/`EditorRenderer`，can* 方法 0）、ENG-09（`JsonResourceLoader`，两个 loader 32 + 78 行）、ENG-14（`config/magic-firework.json` + `FireworkConfig`）、ENG-15（一次编码 + `Plan.truncated` 不入缓存）、ENG-16（布尔规范化 + SHA-256 128-bit 身份）、ENG-18（pending 1024 + 维度 id + 卸载释放）完成。ENG-10：entity/command/screen/item/network 不再调用 `RuntimeRegistry.current()`，改为 server-scoped `of(server)` + `launch(runtime)`；`BlueprintWritingRecipe.assemble` 因签名没有 level/server 句柄保留 `current()`。
-- **退出条件**：ENG-08/09/10/14/15/16/18 的判定式全绿；`spotlessCheck` 通过；覆盖率不低于 B3 基线（每批 +5% 的目标在 B4 结束时仍成立）；`DataPackTest` 行为不变。**已满足：08/09/10（recipe 例外）/14/15/16/18；覆盖率 47.5%（B3 46.3%，B4 目标 50% 未到）。**
+- **退出条件**：ENG-08/09/10/14/15/16/18 的判定式全绿；`spotlessCheck` 通过；覆盖率不低于 B3 基线（每批 +5% 的目标在 B4 结束时仍成立）；`DataPackTest` 行为不变。**已满足：08/09/10（recipe 例外）/14/15/16/18；覆盖率 47.4%（B3 46.3%，B4 目标 50% 未到）。**
 - **依赖**：B3（Spotless/覆盖率/冒烟）、B1（先修正确性再重构）、B2（文档 token 不受重构影响）。
 
 ---
@@ -606,7 +606,7 @@ assert lightSources.placedCount(DIM) == 0;
 | ID | 严重度 | 判定式（最小可执行断言） | 批次 |
 |---|---|---|---|
 | ENG-01 | P0 | `DefinitionLoader.load({ok,bad}).get(bad) == null` 且 WARN 含 id；`! grep -rniE "keeps? the prev" src/main/java` | B1 |
-| ENG-02 | P0 | `BlueprintCrafting.craft(written, 足额)` 返回等值 spec 且扣料；缺料拒绝且 `blueprintKept()` | B1 |
+| ENG-02 | P0 | `BlueprintCrafting.pay` 足额扣料、缺料拒绝且不改输入；`BlueprintCraftingRecipe` 对 written+账单 matches，缺料/多料拒绝 | B1 |
 | ENG-03 | P0 | `readVarInt(Integer.MAX_VALUE)` 抛 `DecoderException` 且 100ms 内返回；`PointBudget` 每 tick 发射 ≤ 4096 | B1 |
 | ENG-04 | P0 | `LightLedger` 往返；启动清理移除记录内 `Blocks.LIGHT`；B3 冒烟重启后计数 = 0 | B1/B3 |
 | ENG-05 | P1 | 3 个坏夹具双端拒绝；`children` 128 边界双端一致；`SchemaParityTest` 绿；无 `ContentStore/DefinitionStore` 引用 | B2 |
@@ -635,7 +635,7 @@ assert lightSources.placedCount(DIM) == 0;
 1. **交付路径 = `docs/engineering-review.md` 单文件**；本轮不改源码、不改 CI。被否：直接开 issue / 直接改代码——用户要的是可跟踪的诊断报告。
 2. **基线 = `28cc133` + 评审时工作区**；行号会随 B0 漂移，复核以符号名定位。被否：只按提交历史评审——会漏掉未跟踪的 `Spark`/`VanillaFireworkShowTest`。
 3. **ENG-01 选“整表替换 + 丢弃 + WARN 带 id”**；被否：“保留旧版本”——需要跨 reload 的可变合并状态，与 `Definitions`/`ContentSnapshot` 的不可变快照语义冲突，且“旧版本”在首次加载时不存在。
-4. **ENG-02 选“编辑器服务端动作 + `BlueprintCrafting` 纯服务”**；被否 A：“删除该特性”——已发布物品与 `BlueprintWritingRecipe` 会失去意义；被否 B：“新增 `BlueprintCraftingRecipe`”——与 `ModRecipes.java:13-16` 的“回程不是配方”声明冲突，且动态配方需要额外的剩余物处理。
+4. **ENG-02 选“`BlueprintCrafting` 纯账单服务 + 动态 `BlueprintCraftingRecipe`”**；被否 A：“删除该特性”——已发布物品与 `BlueprintWritingRecipe` 会失去意义；被否 B：“编辑器按钮”——1.20.1 的 `assemble` 没有 level/server 句柄，编辑器动作还需要额外的 UI 入口；被否 C：保持 `ModRecipes` 的“回程不是配方”——特性仍然没有消费者。`ModRecipes` 的注释已改为两个方向都是配方。
 5. **ENG-04 选“SavedData 持久化 + 启动清理 + close 回收”**；被否：“仅 close 时回收”——崩溃/杀进程路径覆盖不到，正是残留的主因。
 6. **ENG-05 选“schema 为规范真源 + parity test 强制 Java 对齐”**；被否 A：“三份真相 + 人工同步”——漂移正是现状；被否 B：“从 schema 代码生成 Java 常量”——引入构建期代码生成，收益不抵复杂度。
 7. **ENG-06 选“新增 `docs/content-format.md`（英文）”**；被否 A：“恢复 README 的 `## Programs`”——入口页会被 63 行语义淹没，且 README 已明确只留 requirements/build/license；被否 B：“只写注释”——没有任何检查能拦住再次删除。
@@ -644,7 +644,7 @@ assert lightSources.placedCount(DIM) == 0;
 10. **ENG-14 选 `config/magic-firework.json`，缺文件即默认、不写文件**；可调字段为 `maxChildren`、`maxDepth`、`maxSpeed`、`allowLightBlocks`、`maxPointsPerShow`、`maxPointsPerTick`，结构性上限保持编译期；被否 A：环境变量/系统属性——运维不可发现；被否 B：每世界配置——安全上限必须在世界加载前就生效。
 11. **ENG-03 的客户端预算 = 4096 点/tick**（服务端全局 8192 的一半，已落地）；被否 A：直接复用 8192——客户端峰值会与服务器峰值叠加；被否 B：不设预算——信任边界不完整。ENG-15 只做同一常量的交叉断言，不另设第二个预算。
 12. **ENG-18 的 pending 上限 = 1024 条**（已落地；队列存 dimension id，不存 `ServerLevel`）；被否 A：无界——内存可被长 show 放大；被否 B：只靠 TTL——到期前仍持有维度引用。
-13. **覆盖率阈值 = 45% instruction（B2 基线 46.3%，B4 当前 47.5%），B4 目标 +5% 到 50%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
+13. **覆盖率阈值 = 45% instruction（B2 基线 46.3%，B4 当前 47.4%），B4 目标 +5% 到 50%**；被否：一次性 80%——会让 CI 长期红，掩盖真正的回归。
 14. **严重度口径**：P0 行为错误/信任边界；P1 契约/文档/可验证性；P2 结构/工程化/性能。被否：按“改动行数”排序——与用户风险无关。
 15. **标签**：`p0/p1/p2` + `area:network|content|docs|build|client|world|craft|platform|test|config`；里程碑 B0–B4。被否：按文件路径打标签——跨层问题会被拆散。
 16. **语言**：报告正文中文，代码标识符/路径/命令/新文档 `docs/content-format.md` 保持英文。被否：报告英文——团队沟通语言是中文；文档中文——与 README/代码注释不一致。
