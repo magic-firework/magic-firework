@@ -21,6 +21,9 @@
 		],
 		"client": [
 			"com.magic.firework.client.MagicFireworkClient"
+		],
+		"fabric-gametest": [
+			"com.magic.firework.gametest.MagicFireworkGameTest"
 		]
 	},
 	"depends": {

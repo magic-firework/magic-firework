@@ -30,6 +30,18 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	// GameTest server run: `./gradlew runGameTest` (and `check`, via Loom). The tests live in
+	// main and are registered through the fabric-gametest entrypoint.
+	fabricApi {
+		configureTests {
+			createSourceSet = false
+			modId = "magic-firework"
+			eula = true
+			enableClientGameTests = false
+			clearRunDirectory = true
+		}
+	}
 }
 
 dependencies {

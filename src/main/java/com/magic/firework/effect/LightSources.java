@@ -65,6 +65,16 @@ public final class LightSources {
 		});
 	}
 
+	/**
+	 * Recover one level from a detached ledger. The startup path loads the world's ledger and
+	 * calls {@link #recover(MinecraftServer)}; a game test can pass the deserialized form here
+	 * to assert that a crash-left light block is removed.
+	 */
+	public int recover(ServerLevel level, LightLedger source) {
+		return recover(source,
+				dimension -> dimension.equals(level.dimension()) ? new ServerLevelSurface(level) : null);
+	}
+
 	/** Test seam: startup cleanup only needs surfaces for the recorded dimensions. */
 	int recover(LightLedger source, Function<ResourceKey<Level>, LightSurface> levels) {
 		if (source == null) {

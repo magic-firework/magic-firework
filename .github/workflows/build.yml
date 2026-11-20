@@ -60,8 +60,10 @@ jobs:
           python tools/validate_content.py tools/fixtures/valid/fireworks/*.json
       - name: check the documentation contract
         run: python tools/check_docs.py
-      - name: build
+      - name: build and run the game tests
         run: |
+          # `build` depends on `check`, which runs `runGameTest`
+          # (Loom's fabricApi.configureTests).
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             ./gradlew build -Pmod_version="${GITHUB_REF_NAME}"
           else
