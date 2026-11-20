@@ -1,8 +1,8 @@
-# Automatically run the static gates on every push to main, every release tag
-# and every submitted pull request; build the project and run the tests after a
-# merge into main or on a release tag. This can help catch issues that only
-# occur on certain platforms or Java versions, and provides a first line of
-# defence against bad commits.
+# Automatically run the static gates, then build the project and run the
+# configured tests, for every push to main, every release tag and every
+# submitted pull request. This can help catch issues that only occur on certain
+# platforms or Java versions, and provides a first line of defence against bad
+# commits.
 
 name: build
 on:
@@ -57,14 +57,11 @@ jobs:
       - name: check the code comments
         run: python tools/check_comments.py src
 
-  # Compiling, the game tests and the coverage floor cost a full Gradle run;
-  # they happen after review, not on every push to a PR branch.
+  # The main-protection ruleset requires a check named `build`, and a skipped
+  # job never satisfies a required check, so this job runs on every trigger.
   build:
     name: build
     needs: gates
-    # Pull requests stop at the static gates; a merge or a release tag pays
-    # for the build.
-    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
