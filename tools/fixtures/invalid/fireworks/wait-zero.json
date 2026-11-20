@@ -1,0 +1,8 @@
+{
+  "program": [
+    {
+      "op": "wait",
+      "ticks": 0
+    }
+  ]
+}

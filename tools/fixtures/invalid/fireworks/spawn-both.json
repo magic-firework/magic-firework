@@ -1,0 +1,11 @@
+{
+  "program": [
+    {
+      "op": "spawn",
+      "profile": "magic-firework:ring",
+      "children": [
+        0
+      ]
+    }
+  ]
+}

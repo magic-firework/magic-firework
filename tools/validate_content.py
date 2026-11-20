@@ -27,7 +27,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = ROOT / "src" / "main" / "resources" / "schemas"
 DATA_DIR = ROOT / "src" / "main" / "resources" / "data"
 
-# Directory name -> schema file. Keep in sync with ContentStore / DefinitionStore.
+# Directory name -> schema file. The Java loaders map the same directories
+# (ContentLoader for inks/shows, DefinitionLoader for fireworks).
 KINDS = {
     "inks": "ink.schema.json",
     "shows": "show.schema.json",
