@@ -1,5 +1,6 @@
-# Automatically build the project and run any configured tests for every push
-# to main and every submitted pull request. This can help catch issues that only
+# Automatically run the static gates on every push to main, every release tag
+# and every submitted pull request; build the project and run the tests after a
+# merge into main or on a release tag. This can help catch issues that only
 # occur on certain platforms or Java versions, and provides a first line of
 # defence against bad commits.
 
@@ -7,6 +8,8 @@ name: build
 on:
   push:
     branches: [main]
+    # Release tags carry the mod version, so they must reach the build job.
+    tags: ['v*']
   pull_request:
 
 # Least privilege: the build only needs to read the repository.
@@ -19,7 +22,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Everything that needs only Python: seconds to run, so it fails before the
+  # Gradle job spends a runner on a build that is already known to be bad.
+  gates:
+    name: static gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: validate content schemas
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          python tools/validate_content.py
+      - name: validate the fixture corpus
+        run: |
+          for fixture in tools/fixtures/invalid/fireworks/*.json; do
+            if python tools/validate_content.py "$fixture"; then
+              echo "expected the schema to reject $fixture"
+              exit 1
+            fi
+          done
+          python tools/validate_content.py tools/fixtures/valid/fireworks/*.json
+      - name: check the documentation contract
+        run: python tools/check_docs.py
+      # constraints.md §6: the check must stay in the green path, not the docs.
+      - name: check the documentation style
+        run: python tools/check_doc_style.py
+      # comments.md §3: density, block length, banned words, TODO format.
+      - name: check the code comments
+        run: python tools/check_comments.py src
+
+  # Compiling, the game tests and the coverage floor cost a full Gradle run;
+  # they happen after review, not on every push to a PR branch.
   build:
+    name: build
+    needs: gates
+    # Pull requests stop at the static gates; a merge or a release tag pays
+    # for the build.
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -41,25 +86,6 @@ jobs:
           cache: gradle
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: setup python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: validate content schemas
-        run: |
-          python -m pip install --disable-pip-version-check jsonschema
-          python tools/validate_content.py
-      - name: validate the fixture corpus
-        run: |
-          for fixture in tools/fixtures/invalid/fireworks/*.json; do
-            if python tools/validate_content.py "$fixture"; then
-              echo "expected the schema to reject $fixture"
-              exit 1
-            fi
-          done
-          python tools/validate_content.py tools/fixtures/valid/fireworks/*.json
-      - name: check the documentation contract
-        run: python tools/check_docs.py
       - name: build and run the game tests
         run: |
           # `build` depends on `check`, which runs `runGameTest`
