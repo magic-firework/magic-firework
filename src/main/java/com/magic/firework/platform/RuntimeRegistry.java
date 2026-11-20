@@ -1,5 +1,8 @@
 package com.magic.firework.platform;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.magic.firework.MagicFirework;
 import com.magic.firework.content.ContentLoader;
 import com.magic.firework.content.ContentSnapshot;
@@ -20,6 +23,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
  * pending snapshot that the first runtime adopts.
  */
 public final class RuntimeRegistry {
+	private static final Map<MinecraftServer, FireworkRuntime> RUNNING = new ConcurrentHashMap<>();
 	private static volatile FireworkRuntime current;
 	private static volatile Definitions pendingDefinitions = Definitions.empty();
 	private static volatile ContentSnapshot pendingContent = ContentSnapshot.empty();
@@ -32,8 +36,15 @@ public final class RuntimeRegistry {
 		return current;
 	}
 
+	/** Server-scoped lookup for call sites that already have the server, without ambient state. */
+	public static FireworkRuntime of(MinecraftServer server) {
+		return server == null ? null : RUNNING.get(server);
+	}
+
 	public static void start(MinecraftServer server) {
-		current = new FireworkRuntime(server, pendingDefinitions, pendingContent);
+		FireworkRuntime runtime = new FireworkRuntime(server, pendingDefinitions, pendingContent);
+		RUNNING.put(server, runtime);
+		current = runtime;
 		MagicFirework.LOGGER.info("firework runtime started");
 	}
 
@@ -41,6 +52,7 @@ public final class RuntimeRegistry {
 		FireworkRuntime runtime = current;
 		if (runtime != null && runtime.server() == server) {
 			runtime.close();
+			RUNNING.remove(server);
 			current = null;
 		}
 	}

@@ -37,6 +37,7 @@ public class MagicFireworkEntity extends Entity {
 	private static final double EPSILON = 1.0E-6;
 
 	private RocketBrain brain = RocketBrain.empty();
+	private FireworkRuntime runtime;
 	private boolean orphaned;
 	private boolean profileSynced;
 	private UUID ownerUuid;
@@ -64,9 +65,9 @@ public class MagicFireworkEntity extends Entity {
 	 *
 	 * @param parent the rocket that split this one, or {@code null} for a launch
 	 */
-	public static MagicFireworkEntity launch(ServerLevel level, Vec3 position, Vec3 lookDirection,
+	public static MagicFireworkEntity launch(FireworkRuntime runtime, ServerLevel level, Vec3 position,
+			Vec3 lookDirection,
 			RocketSpec spec, Entity owner, MagicFireworkEntity parent) {
-		FireworkRuntime runtime = RuntimeRegistry.current();
 		if (runtime == null || spec == null || !runtime.ledger().trySpawn()) {
 			return null;
 		}
@@ -82,6 +83,7 @@ public class MagicFireworkEntity extends Entity {
 		long seed = parent == null ? level.random.nextLong() : parent.brain.nextChildSeed();
 
 		MagicFireworkEntity rocket = new MagicFireworkEntity(ModRegistries.MAGIC_FIREWORK_ENTITY, level);
+		rocket.runtime = runtime;
 		rocket.brain = RocketBrain.launch(spec, profile.program(), base, seed, depth, lookDirection);
 		rocket.setPos(position);
 		if (owner != null) {
@@ -126,12 +128,16 @@ public class MagicFireworkEntity extends Entity {
 			return;
 		}
 
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		ServerLevel level = (ServerLevel) level();
+		FireworkRuntime runtime = this.runtime;
+		if (runtime == null) {
+			runtime = RuntimeRegistry.of(level.getServer());
+			this.runtime = runtime;
+		}
 		if (runtime == null) {
 			discard();
 			return;
 		}
-		ServerLevel level = (ServerLevel) level();
 		setDeltaMovement(FlightStep.step(getDeltaMovement()));
 		Effect.TickResult result = brain.tick(runtime.definitions()::program);
 		apply(level, runtime, result.effects());
@@ -222,7 +228,8 @@ public class MagicFireworkEntity extends Entity {
 		// Deliberately no direction override: a split child flies the way its own
 		// profile (flight.direction.*) and its own launch op say. Injecting a vector
 		// here would win over both, because launch lets attributes override the op.
-		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), child.spec(), null, this);
+		MagicFireworkEntity entity = launch(runtime, level, position(), brain.lookDirection(), child.spec(), null,
+				this);
 		if (entity != null) {
 			entity.setDeltaMovement(getDeltaMovement());
 		}
@@ -267,7 +274,8 @@ public class MagicFireworkEntity extends Entity {
 		if (tag.hasUUID("Owner")) {
 			ownerUuid = tag.getUUID("Owner");
 		}
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		this.runtime = RuntimeRegistry.of(level().getServer());
+		FireworkRuntime runtime = this.runtime;
 		if (runtime == null) {
 			orphaned = true;
 			return;

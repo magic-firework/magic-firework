@@ -59,7 +59,7 @@ public final class FireworkNetworking {
 					server.execute(() -> {
 						if (player.containerMenu instanceof FireworkEditorMenu menu
 								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
-							FireworkRuntime runtime = RuntimeRegistry.current();
+							FireworkRuntime runtime = RuntimeRegistry.of(server);
 							if (runtime != null) {
 								table.adjustFlight(runtime.definitions(), player, which, delta);
 							}
@@ -77,7 +77,7 @@ public final class FireworkNetworking {
 					server.execute(() -> {
 						if (player.containerMenu instanceof FireworkEditorMenu menu
 								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
-							FireworkRuntime runtime = RuntimeRegistry.current();
+							FireworkRuntime runtime = RuntimeRegistry.of(server);
 							if (runtime != null) {
 								table.adjustDirection(runtime.definitions(), which, delta);
 							}
