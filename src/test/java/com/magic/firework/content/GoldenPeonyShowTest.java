@@ -27,12 +27,10 @@ import com.magic.firework.program.ProgramParser;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bakes the shipped {@code golden_peony} display through the loader and the evaluator.
- *
- * <p>Schema validity is covered by {@code tools/validate_content.py} and
- * {@link ContentSchemaTest}; this test pins the *design* facts a player can see: the
- * shell opens on the burst tick, it stays inside the per-show point budget and the radius
- * it claims, and the bake is byte-for-byte reproducible.
+ * Bakes the shipped {@code golden_peony} display through the loader and the evaluator. Schema validity is
+ * covered by {@code tools/validate_content.py} and {@link ContentSchemaTest}; this test pins the *design*
+ * facts a player can see: the shell opens on the burst tick, stays inside the per-show point budget and
+ * the radius it claims, and the bake is byte-for-byte reproducible.
  */
 class GoldenPeonyShowTest {
 	private static final Path DATA = Path.of("src/main/resources/data/magic-firework");

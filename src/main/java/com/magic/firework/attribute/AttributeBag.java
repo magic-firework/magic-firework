@@ -3,31 +3,26 @@ package com.magic.firework.attribute;
 import java.util.Set;
 
 import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * An immutable, flat attribute map backed directly by a {@link CompoundTag}.
- *
- * <p>Keys are dotted strings such as {@code flight.speed}; values are plain NBT tags.
- * This is the whole "component system" of the mod: because the map <em>is</em> NBT,
- * keys written by a newer version (or by another mod) survive save/load, overlay and
- * network round-trips without any registration. Adding an attribute is one constant
- * in {@link Attributes} plus a read at the place that uses it.
- *
- * <p>Layering is a flat merge, upper layer wins. Immutability is by convention:
- * {@link #raw()} exposes the tag for reading, never mutate it.
- *
- * <p>Two bags are equal when they hold the same keys and the same tags, so a bag can be
- * compared (or used as a map key) like the value object it is.
+ * An immutable, flat attribute map backed by a {@link CompoundTag}: dotted keys such as
+ * {@code flight.speed}, plain NBT values. Because the map <em>is</em> NBT, keys written by a newer
+ * version survive save/load, overlay and network round-trips without registration. Layering is a
+ * flat merge, upper layer wins; {@link #raw()} is read-only by convention, never mutate it.
  */
 public final class AttributeBag {
 	public static final AttributeBag EMPTY = new AttributeBag(new CompoundTag());
+	private static final Set<String> BOOLEAN_KEYS = Set.of(
+			Attributes.DECORATIVE.key(), Attributes.TRAIL.key(), Attributes.FLICKER.key());
 
 	private final CompoundTag tag;
 
@@ -36,14 +31,22 @@ public final class AttributeBag {
 	}
 
 	public static AttributeBag of(CompoundTag tag) {
-		return tag == null || tag.isEmpty() ? EMPTY : new AttributeBag(tag.copy());
+		if (tag == null || tag.isEmpty()) {
+			return EMPTY;
+		}
+		CompoundTag copy = tag.copy();
+		for (String key : BOOLEAN_KEYS) {
+			Tag value = copy.get(key);
+			if (value instanceof NumericTag numeric && !(value instanceof ByteTag)) {
+				copy.putBoolean(key, numeric.getAsInt() != 0);
+			}
+		}
+		return new AttributeBag(copy);
 	}
 
 	public static AttributeBag load(Tag tag) {
 		return tag instanceof CompoundTag compound ? of(compound) : EMPTY;
 	}
-
-	// ── typed reads ───────────────────────────────────────────────────────────
 
 	/**
 	 * Colour / id arrays accept both the NBT int-array form (saved data) and a JSON

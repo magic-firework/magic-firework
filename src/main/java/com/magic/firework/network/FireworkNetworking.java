@@ -11,6 +11,7 @@ import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.screen.FireworkEditorMenu;
 
+import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
@@ -19,19 +20,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Server -> client profile and cloud sync.
- *
- * <p>1.20.1 has no {@code CustomPacketPayload}, so this is a named channel carrying a
- * {@link FriendlyByteBuf}. Only what the client cannot derive travels: the seed, the age
- * and the resolved attribute bag (the trail is rendered from it). The program itself
- * never leaves the server, so a data pack mismatch can only change particles, never the
- * simulation.
- *
- * <p>Every packet starts with {@link #PROTOCOL_VERSION}. A client with a different version
- * drops the packet instead of misreading it.
+ * Server -> client profile and cloud sync. 1.20.1 has no {@code CustomPacketPayload}, so this is a named
+ * channel carrying a {@link FriendlyByteBuf}. Only the seed, the age and the resolved attribute bag
+ * travel (the trail renders from it): the program never leaves the server, so a data pack mismatch can
+ * only change particles. Every packet starts with {@link #PROTOCOL_VERSION}; a wrong version drops it.
  */
 public final class FireworkNetworking {
-	public static final int PROTOCOL_VERSION = 3;
+	public static final int PROTOCOL_VERSION = 4;
 	public static final ResourceLocation PROFILE_CHANNEL = MagicFirework.id("profile");
 	/** Baked stroke cloud: origin + points with per-point time and colour. One packet per burst. */
 	public static final ResourceLocation CLOUD_CHANNEL = MagicFirework.id("cloud");
@@ -58,7 +53,7 @@ public final class FireworkNetworking {
 					server.execute(() -> {
 						if (player.containerMenu instanceof FireworkEditorMenu menu
 								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
-							FireworkRuntime runtime = RuntimeRegistry.current();
+							FireworkRuntime runtime = RuntimeRegistry.of(server);
 							if (runtime != null) {
 								table.adjustFlight(runtime.definitions(), player, which, delta);
 							}
@@ -76,7 +71,7 @@ public final class FireworkNetworking {
 					server.execute(() -> {
 						if (player.containerMenu instanceof FireworkEditorMenu menu
 								&& menu.center() instanceof FireworkCraftingTableBlockEntity table) {
-							FireworkRuntime runtime = RuntimeRegistry.current();
+							FireworkRuntime runtime = RuntimeRegistry.of(server);
 							if (runtime != null) {
 								table.adjustDirection(runtime.definitions(), which, delta);
 							}
@@ -123,10 +118,17 @@ public final class FireworkNetworking {
 	public record Profile(int entityId, long seed, int age, Vec3 velocity, AttributeBag bag) {
 	}
 
-	public static void sendCloud(ServerPlayer player, Vec3 origin, FrameStream stream, boolean flicker) {
+	/** Encode one burst into an immutable payload every recipient can share. */
+	public static byte[] encodeCloud(Vec3 origin, FrameStream stream, boolean flicker) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		writeCloud(buf, origin, stream, flicker);
-		ServerPlayNetworking.send(player, CLOUD_CHANNEL, buf);
+		byte[] payload = new byte[buf.readableBytes()];
+		buf.readBytes(payload);
+		return payload;
+	}
+
+	public static void sendCloud(ServerPlayer player, byte[] payload) {
+		ServerPlayNetworking.send(player, CLOUD_CHANNEL, new FriendlyByteBuf(Unpooled.wrappedBuffer(payload)));
 	}
 
 	/** The wire format of one burst, split out from the send so a test can round-trip it. */

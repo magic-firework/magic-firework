@@ -1,7 +1,13 @@
 plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
+	id 'com.diffplug.spotless' version '7.0.2'
+	id 'net.ltgt.errorprone' version '4.3.0'
+	id 'jacoco'
 }
+
+// Local builds are dev builds; CI passes the tag (or a commit) through -Pmod_version.
+version = providers.gradleProperty('mod_version').orElse('0.0.0-dev').get()
 
 repositories {
 	// Add repositories to retrieve artifacts from in here.
@@ -11,6 +17,10 @@ repositories {
 	// for more information about repositories.
 }
 
+dependencyLocking {
+	lockAllConfigurations()
+}
+
 loom {
 	splitEnvironmentSourceSets()
 
@@ -18,6 +28,18 @@ loom {
 		"magic-firework" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
+		}
+	}
+
+	// GameTest server run: `./gradlew runGameTest` (and `check`, via Loom). The tests live in
+	// main and are registered through the fabric-gametest entrypoint.
+	fabricApi {
+		configureTests {
+			createSourceSet = false
+			modId = "magic-firework"
+			eula = true
+			enableClientGameTests = false
+			clearRunDirectory = true
 		}
 	}
 }
@@ -35,6 +57,7 @@ dependencies {
 	testImplementation platform("org.junit:junit-bom:5.10.2")
 	testImplementation "org.junit.jupiter:junit-jupiter"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+	errorprone "com.google.errorprone:error_prone_core:2.36.0"
 }
 
 processResources {
@@ -48,10 +71,31 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 17
+	it.options.errorprone {
+		disableWarningsInGeneratedCode = true
+		// The codebase uses @return-first Javadocs on purpose; MissingSummary is style, not a bug.
+		disable('MissingSummary')
+	}
+	// Error Prone reports a real class of bugs at ERROR severity; keep javac warnings fatal too.
+	it.options.compilerArgs << '-Werror'
 }
 
 test {
 	useJUnitPlatform()
+}
+
+jacoco {
+	toolVersion = '0.8.13'
+}
+
+jacocoTestReport {
+	dependsOn test
+	sourceSets sourceSets.main
+	sourceSets sourceSets.client
+	reports {
+		xml.required = true
+		html.required = true
+	}
 }
 
 java {
@@ -87,5 +131,49 @@ publishing {
 		// Notice: This block does NOT have the same function as the block in the top level.
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
+	}
+}
+
+spotless {
+	// Ratchet from the end of B2: legacy files keep their history, any file touched after
+	// this baseline (and every new file) must pass the formatter.
+	ratchetFrom '9493d51'
+	java {
+		target 'src/**/*.java'
+		eclipse().configFile('config/eclipse-formatter.xml')
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+	format 'misc', {
+		target '*.gradle', '*.md', 'docs/**/*.md', '.github/**/*.yml', 'gradle.properties'
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+}
+
+jacocoTestCoverageVerification {
+	dependsOn test
+	classDirectories.setFrom(files(sourceSets.main.output, sourceSets.client.output))
+	violationRules {
+		rule {
+			limit {
+				counter = 'INSTRUCTION'
+				value = 'COVEREDRATIO'
+				// Baseline at the end of B2 was 46.3%; the floor leaves room for a refactor.
+				minimum = 0.45
+			}
+		}
+	}
+}
+
+check.dependsOn jacocoTestReport, jacocoTestCoverageVerification
+
+tasks.register('resolveAndLockAll') {
+	notCompatibleWithConfigurationCache('Resolves every configuration at execution time')
+	doFirst {
+		assert gradle.startParameter.writeDependencyLocks : 'Run with --write-locks'
+	}
+	doLast {
+		configurations.findAll { it.canBeResolved }.each { it.resolve() }
 	}
 }

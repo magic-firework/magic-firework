@@ -9,11 +9,9 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * One ingredient of a written blueprint: an item id plus how many the recipe consumes.
- *
- * <p>Stored as {@code {item: "minecraft:paper", count: 1}} so a blueprint outlives a
- * registry change and stays readable without the game running. Items are resolved (and
- * therefore validated) only at craft time.
+ * One ingredient of a written blueprint: an item id plus how many the recipe consumes. Stored as
+ * {@code {item: "minecraft:paper", count: 1}} so a blueprint outlives a registry change and stays
+ * readable without the game running; items are resolved and validated only at craft time.
  */
 public record Cost(String item, int count) {
 	/** A 3x3 grid can hold at most this many of one item across its slots. */

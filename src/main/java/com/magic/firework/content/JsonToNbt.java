@@ -19,13 +19,10 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * JSON -> NBT for data pack files.
- *
- * <p>Deliberately not {@code JsonOps.INSTANCE.convertTo(NbtOps.INSTANCE, json)}: DFU
- * packs JSON number arrays into {@code ByteArrayTag} (so {@code [0.0, 1.0, 0.0]} becomes
- * {@code 0B,1B,0B}), which silently destroys every float in a program. This converter
- * keeps the distinction: integer literals become int/long tags, everything else becomes
- * a double tag, arrays always become a {@link ListTag} of the element's own type.
+ * JSON -> NBT for data pack files. Deliberately not {@code JsonOps.INSTANCE.convertTo(NbtOps.INSTANCE, json)}:
+ * DFU packs JSON number arrays into {@code ByteArrayTag}, so {@code [0.0, 1.0, 0.0]} becomes {@code 0B,1B,0B}
+ * and every float in a program is silently lost. This converter keeps integer literals as int/long,
+ * everything else as double, and arrays as a {@link ListTag} of the element's own type.
  */
 public final class JsonToNbt {
 	private JsonToNbt() {

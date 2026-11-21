@@ -8,12 +8,10 @@ import com.magic.firework.registry.Definitions;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Everything that used to be a static field, scoped to one running server.
- *
- * <p>Content, definitions, tick counters, scheduled effects, temporary lights and the plan
- * cache live here. A reload swaps the immutable snapshots; a server stop closes the runtime,
- * which is also what finally drops the {@code ServerLevel} references held by lights and
- * pending sounds.
+ * Everything that used to be a static field, scoped to one running server: content, definitions, tick
+ * counters, scheduled effects, temporary lights and the plan cache. A reload swaps the immutable
+ * snapshots; a server stop closes the runtime, which is also what finally drops the {@code ServerLevel}
+ * references held by lights and pending sounds.
  */
 public final class FireworkRuntime {
 	private final MinecraftServer server;
@@ -35,7 +33,7 @@ public final class FireworkRuntime {
 	public void tick() {
 		ledger.reset();
 		scheduled.tick(server);
-		lights.tick(server);
+		lights.tick();
 	}
 
 	public void setDefinitions(Definitions next) {
@@ -52,6 +50,17 @@ public final class FireworkRuntime {
 		library = next;
 		content.bindLibrary(next);
 		plans.clear();
+	}
+
+	/** Bind the persistent light ledger and clean up blocks a previous run left behind. */
+	public void bindLights() {
+		lights.bind(server);
+	}
+
+	/** Drop queued effects and light records for a dimension that is going away. */
+	public void onDimensionUnload(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension) {
+		scheduled.onDimensionUnload(dimension.location());
+		lights.onDimensionUnload(dimension);
 	}
 
 	/** The library document changed: drop cached shows and their baked plans. */

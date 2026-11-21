@@ -15,18 +15,10 @@ import com.magic.firework.rocket.RocketSpec;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Derives the material bill of one rocket <em>tree</em> from its concrete attribute values.
- *
- * <p>This runs once, when a blueprint is written, and its result is stored in the blueprint's
- * NBT. Later crafts read that bill instead of recomputing it, so a written blueprint is a
- * snapshot: changing a data pack never changes how much an already written blueprint costs.
- *
- * <p>A nested rocket costs what its children cost on top of itself, because every child is a
- * rocket the player had to build. The recursion walks the same tree the launch does, so a bill
- * can never describe a different rocket than the item holds.
- *
- * <p>Every number comes from a clamped attribute or a {@link FireworkLimits} constant, and
- * {@link Cost} clamps the merged total, so a bill can neither go negative nor be unbounded.
+ * Derives the material bill of one rocket <em>tree</em> from its concrete attribute values, once, when a
+ * blueprint is written; the bill goes into the blueprint's NBT, so a written blueprint is a snapshot and
+ * changing a data pack never reprices it. A nested rocket costs what its children cost on top of itself,
+ * and every number is a clamped attribute or a {@link FireworkLimits} constant, so the total is bounded.
  */
 public final class FormulaCost {
 	public static final String PAPER = "minecraft:paper";

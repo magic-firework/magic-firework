@@ -13,19 +13,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One rocket as data: the profile it runs, the per-instance attribute overlay, and the child
- * rockets its {@code spawn} ops may name by slot.
- *
- * <p>This is the payload of a launch. An item carries it in its {@code MagicFirework} tag, a
- * rocket entity keeps it for its whole life (a delayed child still needs its own subtree after
- * the chunk reloads), and a blueprint records it as written. The tree describes <em>shape</em>
- * only: how deep a show may split is a runtime budget ({@link FireworkLimits#maxDepth}), decided
- * at launch, not a property of the data.
- *
- * <p>The tree is read from item NBT, which a player can forge, so both {@link #save()} and
- * {@link #load(Tag, ResourceLocation)} are bounded by {@link FireworkLimits#maxNestingNodes}
- * rockets in total. A chain spends one node per level, so that one number is also the deepest
- * chain an item can describe.
+ * One rocket as data: the profile it runs, the per-instance overlay, and the child rockets its {@code spawn}
+ * ops may name by slot. An item carries it in its {@code MagicFirework} tag, an entity keeps it for life,
+ * a blueprint records it. Item NBT is forgeable, so {@link #save()} and {@link #load(Tag, ResourceLocation)}
+ * are both bounded by {@link FireworkLimits#maxNestingNodes}: one node per level caps the chain length.
  */
 public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<RocketSpec> children) {
 	public static final String PROFILE = "profile";
@@ -58,7 +49,7 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	}
 
 	public CompoundTag save() {
-		return write(this, new int[] { FireworkLimits.maxNestingNodes });
+		return write(this, new int[]{FireworkLimits.maxNestingNodes});
 	}
 
 	/**
@@ -68,14 +59,12 @@ public record RocketSpec(ResourceLocation profileId, AttributeBag overlay, List<
 	 * @return the spec, or {@code null} when the tag is not a rocket at all
 	 */
 	public static RocketSpec load(Tag tag, ResourceLocation fallbackProfile) {
-		return read(tag, fallbackProfile, new int[] { FireworkLimits.maxNestingNodes });
+		return read(tag, fallbackProfile, new int[]{FireworkLimits.maxNestingNodes});
 	}
 
 	public static RocketSpec load(Tag tag) {
 		return load(tag, null);
 	}
-
-	// ── codec ────────────────────────────────────────────────────────────────
 
 	private static CompoundTag write(RocketSpec spec, int[] nodes) {
 		CompoundTag tag = new CompoundTag();

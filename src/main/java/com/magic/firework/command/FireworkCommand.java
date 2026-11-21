@@ -26,8 +26,10 @@ import com.magic.firework.registry.ModRegistries;
 import com.magic.firework.rocket.RocketSpec;
 import com.magic.firework.sim.FireworkSimulator;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -52,7 +54,12 @@ public final class FireworkCommand {
 	}
 
 	public static void init() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> register(dispatcher));
+	}
+
+	/** Build and register the tree; split out so parsing can be tested without Fabric. */
+	static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
+		return dispatcher.register(
 				Commands.literal("magicfirework")
 						.requires(source -> source.hasPermission(2))
 						.then(Commands.literal("test")
@@ -112,12 +119,12 @@ public final class FireworkCommand {
 						.then(Commands.literal("export")
 								.then(Commands.argument("name", StringArgumentType.word())
 										.executes(context -> export(context,
-												StringArgumentType.getString(context, "name")))))));
+												StringArgumentType.getString(context, "name"))))));
 	}
 
 	/** One running server per JVM, so the registry lookup is unambiguous. */
 	private static FireworkRuntime runtime(CommandSourceStack source) {
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		FireworkRuntime runtime = RuntimeRegistry.of(source.getServer());
 		if (runtime == null) {
 			source.sendFailure(Component.literal("the firework runtime is not running"));
 		}
@@ -143,7 +150,7 @@ public final class FireworkCommand {
 		}
 		ServerLevel level = (ServerLevel) player.level();
 		Vec3 spawn = player.getEyePosition().add(player.getLookAngle().scale(0.5));
-		MagicFireworkEntity rocket = MagicFireworkEntity.launch(level, spawn, player.getLookAngle(),
+		MagicFireworkEntity rocket = MagicFireworkEntity.launch(runtime, level, spawn, player.getLookAngle(),
 				RocketSpec.of(id), player, null);
 		context.getSource().sendSuccess(() -> Component.literal(rocket == null
 				? "launch refused (budget or depth limit)"
@@ -338,7 +345,8 @@ public final class FireworkCommand {
 		return 1;
 	}
 
-	private static int sim(com.mojang.brigadier.context.CommandContext<CommandSourceStack> context, ResourceLocation id) {
+	private static int sim(com.mojang.brigadier.context.CommandContext<CommandSourceStack> context,
+			ResourceLocation id) {
 		return sim(context, id, 200);
 	}
 
@@ -386,7 +394,8 @@ public final class FireworkCommand {
 		context.getSource().sendSuccess(() -> Component.literal(
 				"profiles=" + runtime.definitions().size()
 						+ " spawnsThisTick=" + runtime.ledger().spawnsThisTick()
-						+ " pointsThisTick=" + runtime.ledger().pointsThisTick()), false);
+						+ " pointsThisTick=" + runtime.ledger().pointsThisTick()),
+				false);
 		return 1;
 	}
 

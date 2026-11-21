@@ -37,6 +37,7 @@ public class MagicFireworkEntity extends Entity {
 	private static final double EPSILON = 1.0E-6;
 
 	private RocketBrain brain = RocketBrain.empty();
+	private FireworkRuntime runtime;
 	private boolean orphaned;
 	private boolean profileSynced;
 	private UUID ownerUuid;
@@ -55,34 +56,28 @@ public class MagicFireworkEntity extends Entity {
 	}
 
 	/**
-	 * Creates one rocket from a spec. The spec is the whole definition: the profile whose
-	 * program and defaults it runs, the per-instance overlay, and the child tree its
-	 * {@code spawn} ops may name by slot.
-	 *
-	 * <p>How deep a split chain may go is a safety constant, not something an item declares:
-	 * {@link FireworkLimits#maxDepth} bounds every generation, whatever the data packs say.
-	 *
+	 * Creates one rocket from a spec: the profile whose program and defaults it runs, the per-instance
+	 * overlay, and the child tree its {@code spawn} ops may name by slot. Split depth is a safety
+	 * constant, {@link FireworkLimits#maxDepth}, not something an item declares.
 	 * @param parent the rocket that split this one, or {@code null} for a launch
 	 */
-	public static MagicFireworkEntity launch(ServerLevel level, Vec3 position, Vec3 lookDirection,
+	public static MagicFireworkEntity launch(FireworkRuntime runtime, ServerLevel level, Vec3 position,
+			Vec3 lookDirection,
 			RocketSpec spec, Entity owner, MagicFireworkEntity parent) {
-		FireworkRuntime runtime = RuntimeRegistry.current();
-		if (runtime == null || spec == null || !runtime.ledger().trySpawn()) {
+		if (runtime == null || !runtime.ledger().trySpawn()) {
 			return null;
 		}
-		FireworkProfile profile = runtime.definitions().get(spec.profileId());
-		if (profile == null) {
-			return null;
-		}
-		AttributeBag base = profile.defaults().overlay(spec.overlay());
 		int depth = parent == null ? 0 : parent.depth() + 1;
-		if (parent != null && depth > FireworkLimits.maxDepth) {
+		Launch plan = resolveLaunch(runtime, spec, depth);
+		if (plan == null) {
 			return null;
 		}
 		long seed = parent == null ? level.random.nextLong() : parent.brain.nextChildSeed();
 
 		MagicFireworkEntity rocket = new MagicFireworkEntity(ModRegistries.MAGIC_FIREWORK_ENTITY, level);
-		rocket.brain = RocketBrain.launch(spec, profile.program(), base, seed, depth, lookDirection);
+		rocket.runtime = runtime;
+		rocket.brain = RocketBrain.launch(spec, plan.profile().program(), plan.base(), seed, plan.depth(),
+				lookDirection);
 		rocket.setPos(position);
 		if (owner != null) {
 			rocket.ownerUuid = owner.getUUID();
@@ -90,14 +85,33 @@ public class MagicFireworkEntity extends Entity {
 
 		level.addFreshEntity(rocket);
 
-		if (base.has(Attributes.LAUNCH_SOUND)) {
-			Sounds.play(level, position, ResourceLocation.tryParse(base.raw().getString(Attributes.LAUNCH_SOUND)),
-					3.0F, 1.0F);
+		if (plan.base().has(Attributes.LAUNCH_SOUND)) {
+			Sounds.play(level, position,
+					ResourceLocation.tryParse(plan.base().raw().getString(Attributes.LAUNCH_SOUND)), 3.0F, 1.0F);
 		}
 		return rocket;
 	}
 
-	// ── ticking ──────────────────────────────────────────────────────────────
+	/**
+	 * The part of a launch that does not touch the world: which profile runs, the resolved attribute base
+	 * and the generation depth. A pure seam, so a launch can be validated without a server.
+	 * @param depth 0 for a root launch, {@code parent.depth() + 1} for a split
+	 * @return the plan, or {@code null} when the profile is missing or the depth is over the limit
+	 */
+	public static Launch resolveLaunch(FireworkRuntime runtime, RocketSpec spec, int depth) {
+		if (runtime == null || spec == null || depth < 0 || depth > FireworkLimits.maxDepth) {
+			return null;
+		}
+		FireworkProfile profile = runtime.definitions().get(spec.profileId());
+		if (profile == null) {
+			return null;
+		}
+		return new Launch(profile, profile.defaults().overlay(spec.overlay()), depth);
+	}
+
+	/** A validated launch: the profile to run, its resolved defaults and the generation depth. */
+	public record Launch(FireworkProfile profile, AttributeBag base, int depth) {
+	}
 
 	@Override
 	public void tick() {
@@ -114,10 +128,8 @@ public class MagicFireworkEntity extends Entity {
 		AttributeBag bag = brain.bag();
 
 		if (level().isClientSide) {
-			// The client runs the same flight step as the server. Server positions stay
-			// authoritative (a move packet snaps us back onto them), but moving here as well is
-			// what makes the rocket advance on every client tick instead of stepping at the
-			// packet rate, which is what made it look jerky.
+			// The client runs the same flight step as the server: server positions stay
+			// authoritative, but stepping locally is what keeps it smooth between packets.
 			if (brain.initialized()) {
 				setDeltaMovement(FlightStep.step(getDeltaMovement()));
 				move(MoverType.SELF, getDeltaMovement());
@@ -126,12 +138,16 @@ public class MagicFireworkEntity extends Entity {
 			return;
 		}
 
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		ServerLevel level = (ServerLevel) level();
+		FireworkRuntime runtime = this.runtime;
+		if (runtime == null) {
+			runtime = RuntimeRegistry.of(level.getServer());
+			this.runtime = runtime;
+		}
 		if (runtime == null) {
 			discard();
 			return;
 		}
-		ServerLevel level = (ServerLevel) level();
 		setDeltaMovement(FlightStep.step(getDeltaMovement()));
 		Effect.TickResult result = brain.tick(runtime.definitions()::program);
 		apply(level, runtime, result.effects());
@@ -139,7 +155,7 @@ public class MagicFireworkEntity extends Entity {
 		this.move(MoverType.SELF, getDeltaMovement());
 		brain.setCollided(horizontalCollision || verticalCollision);
 		orient();
-		tickPendingChildren(level, runtime);
+		tickPendingChildren(level);
 
 		if (!profileSynced) {
 			// Sent after the first tick so the packet carries the velocity the launch op set;
@@ -161,7 +177,7 @@ public class MagicFireworkEntity extends Entity {
 				AttributeBag bag = brain.bag();
 				runtime.shows().burst(level, position(), bag, brain.seed(), Attributes.FLICKER.get(bag));
 			} else if (effect instanceof Effect.SpawnChild child) {
-				scheduleChild(level, runtime, child);
+				scheduleChild(level, child);
 			} else if (effect instanceof Effect.PlaySound sound) {
 				Sounds.play(level, position(), sound.id(), sound.volume(), sound.pitch());
 			} else if (effect instanceof Effect.Light light) {
@@ -178,8 +194,6 @@ public class MagicFireworkEntity extends Entity {
 		setYRot((float) (Math.atan2(velocity.x, velocity.z) * (180.0 / Math.PI)));
 		setXRot((float) (-Math.atan2(velocity.y, velocity.horizontalDistance()) * (180.0 / Math.PI)));
 	}
-
-	// ── state accessors ──────────────────────────────────────────────────────
 
 	public long seed() {
 		return brain.seed();
@@ -199,7 +213,7 @@ public class MagicFireworkEntity extends Entity {
 	 * A slot the item does not fill spawns nothing, which is how a program can offer more slots
 	 * than a given rocket was built with.
 	 */
-	private void scheduleChild(ServerLevel level, FireworkRuntime runtime, Effect.SpawnChild effect) {
+	private void scheduleChild(ServerLevel level, Effect.SpawnChild effect) {
 		RocketSpec target = effect.target().isSlot()
 				? brain.child(effect.target().childIndex())
 				: RocketSpec.of(effect.target().profile());
@@ -208,27 +222,26 @@ public class MagicFireworkEntity extends Entity {
 		}
 		RocketBrain.Child immediate = brain.scheduleChild(target, effect.delayTicks());
 		if (immediate != null) {
-			spawnChildNow(level, runtime, immediate);
+			spawnChildNow(level, immediate);
 		}
 	}
 
-	private void tickPendingChildren(ServerLevel level, FireworkRuntime runtime) {
+	private void tickPendingChildren(ServerLevel level) {
 		for (RocketBrain.Child child : brain.dueChildren()) {
-			spawnChildNow(level, runtime, child);
+			spawnChildNow(level, child);
 		}
 	}
 
-	private void spawnChildNow(ServerLevel level, FireworkRuntime runtime, RocketBrain.Child child) {
+	private void spawnChildNow(ServerLevel level, RocketBrain.Child child) {
 		// Deliberately no direction override: a split child flies the way its own
 		// profile (flight.direction.*) and its own launch op say. Injecting a vector
 		// here would win over both, because launch lets attributes override the op.
-		MagicFireworkEntity entity = launch(level, position(), brain.lookDirection(), child.spec(), null, this);
+		MagicFireworkEntity entity = launch(runtime, level, position(), brain.lookDirection(), child.spec(), null,
+				this);
 		if (entity != null) {
 			entity.setDeltaMovement(getDeltaMovement());
 		}
 	}
-
-	// ── sync / persistence ───────────────────────────────────────────────────
 
 	/** Client side: bind the synced attributes and velocity, then fly. */
 	public void acceptProfile(long seed, int age, Vec3 velocity, AttributeBag base) {
@@ -267,7 +280,8 @@ public class MagicFireworkEntity extends Entity {
 		if (tag.hasUUID("Owner")) {
 			ownerUuid = tag.getUUID("Owner");
 		}
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		this.runtime = RuntimeRegistry.of(level().getServer());
+		FireworkRuntime runtime = this.runtime;
 		if (runtime == null) {
 			orphaned = true;
 			return;
@@ -280,8 +294,6 @@ public class MagicFireworkEntity extends Entity {
 		}
 		brain = loaded;
 	}
-
-	// ── entity constraints ───────────────────────────────────────────────────
 
 	@Override
 	public boolean isPickable() {

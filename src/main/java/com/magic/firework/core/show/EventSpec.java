@@ -3,11 +3,9 @@ package com.magic.firework.core.show;
 import com.magic.firework.core.Id;
 
 /**
- * A non-visual side effect of a node (sound, temporary light), scheduled relative to the
- * node's start tick at the node's frame position.
- *
- * <p>This is the track that lets a baked show keep its world effects; the platform decides
- * how to play them, the core only says what and when.
+ * A non-visual side effect of a node (sound, temporary light), scheduled relative to the node's start
+ * tick at its frame position. This track is what lets a baked show keep its world effects: the
+ * platform decides how to play them, the core only says what and when.
  */
 public record EventSpec(Kind kind, int tick, Id target, double a, double b) {
 	public EventSpec {
@@ -24,7 +22,6 @@ public record EventSpec(Kind kind, int tick, Id target, double a, double b) {
 	}
 
 	public enum Kind {
-		SOUND,
-		LIGHT
+		SOUND, LIGHT
 	}
 }

@@ -16,11 +16,9 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
 /**
- * The blueprint: one saved firework formula on a sheet of paper.
- *
- * <p>Blank until an anvil-free writing recipe pairs it with a magic firework. Once written
- * it is never edited again — the bill lives in the NBT, so the same sheet always costs the
- * same materials.
+ * The blueprint: one saved firework formula on a sheet of paper. Blank until the writing recipe pairs
+ * it with a magic firework; once written it is never edited again, and the bill lives in the NBT, so
+ * the same sheet always costs the same materials.
  */
 public class FireworkBlueprintItem extends Item {
 	public FireworkBlueprintItem(Properties properties) {

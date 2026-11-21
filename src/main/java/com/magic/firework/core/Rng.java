@@ -21,6 +21,14 @@ public final class Rng {
 		return (nextLong() >>> 11) * 0x1.0p-53;
 	}
 
+	/** Uniform integer in {@code [0, bound)}. */
+	public int nextInt(int bound) {
+		if (bound <= 0) {
+			return 0;
+		}
+		return (int) Math.floorMod(nextLong(), (long) bound);
+	}
+
 	/** Standard normal (Box-Muller, one sample per call for simplicity). */
 	public double nextGaussian() {
 		double u1 = Math.max(1.0E-12, nextDouble());

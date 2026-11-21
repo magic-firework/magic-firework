@@ -16,28 +16,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Reads the op list of a profile.
- *
- * <pre>
- * data/&lt;ns&gt;/fireworks/ring.json
- * {
- *   "attributes": { "show": "magic-firework:ring" },
- *   "program": [
- *     { "op": "launch", "speed": 0.12 },
- *     { "op": "wait", "ticks": 35 },
- *     { "op": "burst" },
- *     { "op": "end" }
- *   ]
- * }
- * </pre>
- *
- * <p>Ops run in list order, starting on the tick the frame is pushed. The only way a program
- * spends time is {@link Op.Wait}: {@code launch}, {@code wait}, {@code burst} is a rocket that
- * rises for that many ticks and then bursts.
- *
- * <p>Every key an op carries is checked against the keys that op accepts, so a typo or a field
- * from an older format is a hard error for that profile instead of being silently ignored. The
- * store logs it and keeps the previous version of the profile.
+ * Reads the op list of a profile; docs/content-format.md §Profile owns the document shape. Ops run in
+ * list order from the tick the frame is pushed, and only {@link Op.Wait} spends time: {@code launch},
+ * {@code wait}, {@code burst} rises for that many ticks, then bursts. Every key is checked against the
+ * keys its op accepts, so a typo or an older field is a hard error for that profile, not a silent skip.
  */
 public final class ProgramParser {
 	/** The keys each op accepts; {@code op} is always one of them. Kept in step with the schema. */
@@ -108,11 +90,9 @@ public final class ProgramParser {
 	}
 
 	/**
-	 * {@code { "op": "wait" }} spends the rocket's flight time, which is the number the crafting
-	 * table edits; {@code { "op": "wait", "ticks": n }} spends a literal count instead.
-	 *
-	 * <p>An explicit length must be positive: {@code "ticks": 0} would be a wait that waits,
-	 * which is an authoring mistake, not a value.
+	 * {@code { "op": "wait" }} spends the rocket's flight time, the number the crafting table edits;
+	 * {@code { "op": "wait", "ticks": n }} spends a literal count instead. An explicit length must be
+	 * positive: {@code "ticks": 0} would be a wait that waits, which is an authoring mistake.
 	 */
 	private static Op.Wait wait(CompoundTag tag, int index) throws ProgramException {
 		if (!tag.contains("ticks")) {
@@ -130,11 +110,9 @@ public final class ProgramParser {
 	}
 
 	/**
-	 * A spawn op names what it creates in exactly one of two ways, and the parser is the place
-	 * that decides which: {@code children} lists item slots, {@code profile} names content.
-	 *
-	 * <p>{@code count} expands here rather than in the interpreter, so the op the runtime sees is
-	 * already a flat list of concrete requests and the two forms cannot drift apart later.
+	 * A spawn op names what it creates in exactly one of two ways, and the parser decides which:
+	 * {@code children} lists item slots, {@code profile} names content. {@code count} expands here rather than
+	 * in the interpreter, so the runtime sees a flat list of concrete requests and the two forms cannot drift.
 	 */
 	private static Op.Spawn spawn(CompoundTag tag, int index) throws ProgramException {
 		int delay = Math.max(0, tag.getInt("delay"));

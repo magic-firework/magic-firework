@@ -5,10 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * One entry of the call stack: a program, its instruction pointer and its pending wait.
- *
- * <p>{@code waitUntil} is an absolute age, not a countdown, so saving mid-wait and loading it
- * back resumes on exactly the tick the author scheduled: a {@code wait 25} pushed at age 7 is
- * satisfied at age 32 before and after a reload, and no tick is lost or repeated.
+ * {@code waitUntil} is an absolute age, not a countdown, so saving mid-wait and loading it back resumes
+ * on exactly the tick the author scheduled: a {@code wait 25} pushed at age 7 is satisfied at age 32
+ * before and after a reload, and no tick is lost or repeated.
  */
 public final class Frame {
 	/** No wait in progress. An absolute age is never negative, so the sentinel is unambiguous. */
@@ -39,7 +38,8 @@ public final class Frame {
 		if (program == null) {
 			return null;
 		}
-		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));	}
+		return new Frame(id, program, tag.getInt("pc"), tag.getInt("wait"));
+	}
 
 	public ResourceLocation programId() {
 		return programId;

@@ -5,14 +5,10 @@ import com.magic.firework.config.FireworkLimits;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The one piece of physics the entity and the headless simulator must share, otherwise
- * a simulated test would not describe what actually happens in game.
- *
- * <p>Two things happen every tick: the flight line is braked, then the hard speed ceiling
- * applies. Braking is a single force along whichever way the rocket is flying, so a straight shot
- * and an aimed one behave the same: the speed runs down to zero and stays there for whatever is
- * left of the flight time. Nothing ever pushes the rocket off its launch line, and it never turns
- * around — it hangs where it stopped until its program ends.
+ * The one piece of physics the entity and the headless simulator must share, otherwise a simulated test
+ * would not describe the game. Every tick the flight line is braked, then the hard speed ceiling applies;
+ * a straight shot and an aimed one behave the same, because braking is one force along the flight line.
+ * Speed runs down to zero and stays there for the rest of the flight time; nothing turns the rocket.
  */
 public final class FlightStep {
 	private final static double EPSILON = 1.0E-6;

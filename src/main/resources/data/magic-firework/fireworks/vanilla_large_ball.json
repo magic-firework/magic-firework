@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/firework.schema.json",
+  "attributes": {
+    "flight.speed": 1.8,
+    "flight.ticks": 50,
+    "launch.sound": "minecraft:entity.firework_rocket.launch",
+    "trail.enabled": true,
+    "trail.interval": 1,
+    "trail.colors": [
+      16777215
+    ],
+    "trail.scale": 0.55,
+    "show": "magic-firework:vanilla_large_ball"
+  },
+  "program": [
+    {
+      "op": "launch"
+    },
+    {
+      "op": "wait"
+    },
+    {
+      "op": "burst"
+    }
+  ]
+}

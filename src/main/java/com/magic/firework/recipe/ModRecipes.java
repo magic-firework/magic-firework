@@ -8,16 +8,16 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 
 /**
- * Recipe serializers for the blueprint.
- *
- * <p>Only writing is a recipe today. Turning a written blueprint back into a firework is
- * deliberately not a crafting recipe: that lives in the editor. A dynamic recipe needs no
- * per-recipe JSON beyond its type, and it uses the vanilla {@code crafting} recipe type so
- * {@code RecipeManager.getRemainingItemsFor} can find it when the result is taken.
+ * Recipe serializers for the blueprint: writing freezes the bill, and the reverse craft pays
+ * that bill back to turn the written sheet into its firework. Both are dynamic recipes, so a
+ * single JSON of their type is enough; they use the vanilla {@code crafting} type so
+ * {@code RecipeManager.getRemainingItemsFor} can find them when the result is taken.
  */
 public final class ModRecipes {
-	public static final RecipeSerializer<BlueprintWritingRecipe> BLUEPRINT_WRITING =
-			new SimpleCraftingRecipeSerializer<>(BlueprintWritingRecipe::new);
+	public static final RecipeSerializer<BlueprintWritingRecipe> BLUEPRINT_WRITING = new SimpleCraftingRecipeSerializer<>(
+			BlueprintWritingRecipe::new);
+	public static final RecipeSerializer<BlueprintCraftingRecipe> BLUEPRINT_CRAFTING = new SimpleCraftingRecipeSerializer<>(
+			BlueprintCraftingRecipe::new);
 
 	private ModRecipes() {
 	}
@@ -25,5 +25,7 @@ public final class ModRecipes {
 	public static void init() {
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, MagicFirework.id("blueprint_writing"),
 				BLUEPRINT_WRITING);
+		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, MagicFirework.id("blueprint_crafting"),
+				BLUEPRINT_CRAFTING);
 	}
 }

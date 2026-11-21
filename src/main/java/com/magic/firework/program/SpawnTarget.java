@@ -5,18 +5,10 @@ import java.util.Objects;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * One thing a {@code spawn} op asks for, in exactly one of two ways:
- *
- * <ul>
- *   <li>a <b>slot</b> ({@link #slot(int)}): the child the launching item carries at that index,
- *       so a crafted rocket decides what appears and the data pack only decides when;</li>
- *   <li>a <b>profile</b> ({@link #of(ResourceLocation)}): a content profile used as-is, which is
- *       how a data pack ships a fixed show without any item involvement.</li>
- * </ul>
- *
- * <p>The two are mutually exclusive by construction: a slot target never names a profile, and a
- * profile target never names a slot. That is what keeps "the item decides" and "the pack decides"
- * from silently fighting over the same child.
+ * One thing a {@code spawn} op asks for, in exactly one of two ways: a <b>slot</b> ({@link #slot(int)}),
+ * the child the launching item carries at that index, so the item decides what appears and the data pack
+ * only when; or a <b>profile</b> ({@link #of(ResourceLocation)}), content used as-is, how a pack ships a
+ * fixed show. Mutually exclusive by construction, so item and pack never fight over the same child.
  */
 public record SpawnTarget(int childIndex, ResourceLocation profile) {
 	/** Sentinel child index for a target that names a profile instead of an item slot. */

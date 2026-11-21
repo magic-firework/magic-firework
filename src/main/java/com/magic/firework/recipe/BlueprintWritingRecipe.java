@@ -24,13 +24,10 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Blank blueprint + one magic firework = the same blueprint, written.
- *
- * <p>The bill is computed here, once, from the firework's resolved attributes and then
- * frozen into the blueprint NBT. The firework is a sample: it is returned by
- * {@link #getRemainingItems} so a carefully assembled rocket is not lost.
- *
- * <p>Only a <em>blank</em> blueprint matches, which is what makes a written one immutable.
+ * Blank blueprint + one magic firework = the same blueprint, written. The bill is computed here, once,
+ * from the firework's resolved attributes and frozen into the blueprint NBT; the firework itself is a
+ * sample and is returned by {@link #getRemainingItems}, so a carefully assembled rocket is not lost.
+ * Only a <em>blank</em> blueprint matches, which is what makes a written one immutable.
  */
 public final class BlueprintWritingRecipe extends CustomRecipe {
 	public BlueprintWritingRecipe(ResourceLocation id, CraftingBookCategory category) {

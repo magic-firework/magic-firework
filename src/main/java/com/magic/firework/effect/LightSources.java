@@ -1,69 +1,211 @@
 package com.magic.firework.effect;
 
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.magic.firework.config.FireworkLimits;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
 /**
- * Dynamic light for the {@code light} op: places a vanilla light block for N ticks and
- * removes it again. Only ever touches air, so it cannot destroy terrain.
- *
- * <p>One instance per runtime: the placed-block map is no longer a static that survives a
- * world switch. {@link #clear()} runs when the runtime closes.
+ * Dynamic light for the {@code light} op: places a vanilla light block for N ticks and removes it again,
+ * touching only air so it cannot destroy terrain. One instance per runtime, keyed by dimension: the
+ * placed-block map is no longer a static that survives a world switch. A {@link LightLedger} mirrors
+ * every placement into the world save, and {@link #clear()} runs when the runtime closes.
  */
 public final class LightSources {
-	private final Map<ServerLevel, Map<BlockPos, Long>> placed = new IdentityHashMap<>();
+	private final Map<ResourceKey<Level>, LightSurface> surfaces = new LinkedHashMap<>();
+	private final Map<ResourceKey<Level>, Map<BlockPos, Long>> placed = new LinkedHashMap<>();
+	private LightLedger ledger;
+
+	/**
+	 * Adopt the world's ledger and remove every light block a previous run left behind.
+	 * Runs once the server is started, when the levels exist.
+	 */
+	public void bind(MinecraftServer server) {
+		this.ledger = LightLedger.get(server);
+		recover(server);
+	}
+
+	/** Drop a dimension that is going away; remove its live blocks and ledger rows. */
+	public void onDimensionUnload(ResourceKey<Level> dimension) {
+		Map<BlockPos, Long> blocks = placed.remove(dimension);
+		LightSurface surface = surfaces.remove(dimension);
+		if (blocks == null) {
+			return;
+		}
+		for (BlockPos pos : blocks.keySet()) {
+			if (surface != null && surface.isLight(pos)) {
+				surface.removeLight(pos);
+			}
+			if (ledger != null) {
+				ledger.remove(dimension, pos);
+			}
+		}
+	}
+
+	/** @return how many leftover light blocks were removed */
+	public int recover(MinecraftServer server) {
+		return recover(ledger, dimension -> {
+			ServerLevel level = server.getLevel(dimension);
+			return level == null ? null : new ServerLevelSurface(level);
+		});
+	}
+
+	/**
+	 * Recover one level from a detached ledger. The startup path loads the world's ledger and
+	 * calls {@link #recover(MinecraftServer)}; a game test can pass the deserialized form here
+	 * to assert that a crash-left light block is removed.
+	 */
+	public int recover(ServerLevel level, LightLedger source) {
+		return recover(source,
+				dimension -> dimension.equals(level.dimension()) ? new ServerLevelSurface(level) : null);
+	}
+
+	/** Test seam: startup cleanup only needs surfaces for the recorded dimensions. */
+	int recover(LightLedger source, Function<ResourceKey<Level>, LightSurface> levels) {
+		if (source == null) {
+			return 0;
+		}
+		int removed = 0;
+		for (Map.Entry<ResourceKey<Level>, Map<BlockPos, Long>> entry : source.entries().entrySet()) {
+			LightSurface surface = levels.apply(entry.getKey());
+			if (surface == null) {
+				continue;
+			}
+			for (BlockPos pos : entry.getValue().keySet()) {
+				if (surface.isLight(pos)) {
+					surface.removeLight(pos);
+					removed++;
+				}
+			}
+		}
+		source.clear();
+		return removed;
+	}
 
 	public void light(ServerLevel level, BlockPos pos, int ticks) {
+		light(surfaceOf(level), pos, ticks);
+	}
+
+	/** Test seam: the placement rules only need a {@link LightSurface}. */
+	void light(LightSurface surface, BlockPos pos, int ticks) {
 		if (!FireworkLimits.allowLightBlocks || ticks <= 0) {
 			return;
 		}
-		if (!level.getBlockState(pos).isAir()) {
+		if (!surface.isAir(pos)) {
 			return;
 		}
-		Map<BlockPos, Long> blocks = placed.computeIfAbsent(level, key -> new HashMap<>());
+		surfaces.put(surface.dimension(), surface);
+		Map<BlockPos, Long> blocks = placed.computeIfAbsent(surface.dimension(), key -> new HashMap<>());
 		if (blocks.containsKey(pos)) {
 			return;
 		}
-		blocks.put(pos.immutable(), level.getGameTime() + ticks);
-		level.setBlockAndUpdate(pos, Blocks.LIGHT.defaultBlockState());
+		long until = surface.gameTime() + ticks;
+		blocks.put(pos.immutable(), until);
+		surface.setLight(pos);
+		if (ledger != null) {
+			ledger.put(surface.dimension(), pos, until);
+		}
 	}
 
 	/** Called once per server tick to restore the blocks whose light expired. */
-	public void tick(MinecraftServer server) {
-		if (placed.isEmpty()) {
-			return;
-		}
-		for (Iterator<Map.Entry<ServerLevel, Map<BlockPos, Long>>> levels = placed.entrySet().iterator(); levels
-				.hasNext();) {
-			Map.Entry<ServerLevel, Map<BlockPos, Long>> entry = levels.next();
-			ServerLevel level = entry.getKey();
+	public void tick() {
+		for (Iterator<Map.Entry<ResourceKey<Level>, Map<BlockPos, Long>>> dimensions = placed.entrySet()
+				.iterator(); dimensions.hasNext();) {
+			Map.Entry<ResourceKey<Level>, Map<BlockPos, Long>> entry = dimensions.next();
+			LightSurface surface = surfaces.get(entry.getKey());
+			if (surface == null) {
+				// No live level for this dimension; keep the rows for the next startup recovery.
+				continue;
+			}
 			for (Iterator<Map.Entry<BlockPos, Long>> blocks = entry.getValue().entrySet().iterator(); blocks
 					.hasNext();) {
 				Map.Entry<BlockPos, Long> block = blocks.next();
-				if (level.getGameTime() <= block.getValue()) {
+				if (surface.gameTime() <= block.getValue()) {
 					continue;
 				}
-				if (level.getBlockState(block.getKey()).is(Blocks.LIGHT)) {
-					level.removeBlock(block.getKey(), false);
+				if (surface.isLight(block.getKey())) {
+					surface.removeLight(block.getKey());
+				}
+				if (ledger != null) {
+					ledger.remove(entry.getKey(), block.getKey());
 				}
 				blocks.remove();
 			}
 			if (entry.getValue().isEmpty()) {
-				levels.remove();
+				dimensions.remove();
 			}
 		}
 	}
 
 	public void clear() {
+		for (Map.Entry<ResourceKey<Level>, Map<BlockPos, Long>> entry : placed.entrySet()) {
+			LightSurface surface = surfaces.get(entry.getKey());
+			if (surface == null) {
+				continue;
+			}
+			for (BlockPos pos : entry.getValue().keySet()) {
+				if (surface.isLight(pos)) {
+					surface.removeLight(pos);
+				}
+			}
+		}
 		placed.clear();
+		surfaces.clear();
+		if (ledger != null) {
+			ledger.clear();
+		}
+	}
+
+	/** @return how many blocks are currently recorded for a dimension */
+	public int placedCount(ResourceKey<Level> dimension) {
+		Map<BlockPos, Long> blocks = placed.get(dimension);
+		return blocks == null ? 0 : blocks.size();
+	}
+
+	private LightSurface surfaceOf(ServerLevel level) {
+		return surfaces.computeIfAbsent(level.dimension(), key -> new ServerLevelSurface(level));
+	}
+
+	/** The production surface: every decision delegates to the live {@link ServerLevel}. */
+	private record ServerLevelSurface(ServerLevel level) implements LightSurface {
+		@Override
+		public ResourceKey<Level> dimension() {
+			return level.dimension();
+		}
+
+		@Override
+		public boolean isAir(BlockPos pos) {
+			return level.getBlockState(pos).isAir();
+		}
+
+		@Override
+		public boolean isLight(BlockPos pos) {
+			return level.getBlockState(pos).is(Blocks.LIGHT);
+		}
+
+		@Override
+		public void setLight(BlockPos pos) {
+			level.setBlockAndUpdate(pos, Blocks.LIGHT.defaultBlockState());
+		}
+
+		@Override
+		public void removeLight(BlockPos pos) {
+			level.removeBlock(pos, false);
+		}
+
+		@Override
+		public long gameTime() {
+			return level.getGameTime();
+		}
 	}
 }

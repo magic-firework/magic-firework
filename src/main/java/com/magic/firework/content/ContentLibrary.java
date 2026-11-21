@@ -3,11 +3,14 @@ package com.magic.firework.content;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -18,13 +21,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 
 /**
- * Server-side store for authored shows.
- *
- * <p>One NBT file per entry under the world's {@code magic_firework/library} directory. A
- * library entry is an inline document plus its author, so content can outlive the item that
- * carried it and still be resolved by id. Names are restricted to a safe alphabet, kept
- * apart from the namespace data packs use, and counted per author so a player cannot fill
- * the disk.
+ * Server-side store for authored shows: one NBT file per entry under the world's
+ * {@code magic_firework/library}. An entry is an inline document plus its author, so content
+ * outlives the item that carried it and still resolves by id. Names use a safe alphabet, kept
+ * apart from the data pack namespace, and are counted per author so one player cannot fill the disk.
  */
 public final class ContentLibrary {
 	public static final String NAMESPACE = "magic-firework";
@@ -34,17 +34,34 @@ public final class ContentLibrary {
 
 	private final Path root;
 	private final int maxPerAuthor;
+	private final Clock clock;
+	private final TagWriter writer;
 	private final Map<Id, Entry> entries = new LinkedHashMap<>();
 	/** Bumped on every load/save/delete so caches can invalidate by cheap comparison. */
-	private volatile long version;
+	private final AtomicLong version = new AtomicLong();
 
 	public ContentLibrary(Path root) {
 		this(root, DEFAULT_MAX_PER_AUTHOR);
 	}
 
 	public ContentLibrary(Path root, int maxPerAuthor) {
+		this(root, maxPerAuthor, Clock.systemUTC());
+	}
+
+	public ContentLibrary(Path root, int maxPerAuthor, Clock clock) {
+		this(root, maxPerAuthor, clock, ContentLibrary::writeNbt);
+	}
+
+	ContentLibrary(Path root, int maxPerAuthor, Clock clock, TagWriter writer) {
 		this.root = root;
 		this.maxPerAuthor = Math.max(1, maxPerAuthor);
+		this.clock = clock == null ? Clock.systemUTC() : clock;
+		this.writer = writer == null ? ContentLibrary::writeNbt : writer;
+	}
+
+	@FunctionalInterface
+	interface TagWriter {
+		void write(CompoundTag tag, Path path) throws IOException;
 	}
 
 	public record Entry(Id id, UUID author, long created, CompoundTag document) {
@@ -59,7 +76,7 @@ public final class ContentLibrary {
 		if (!Files.isDirectory(root)) {
 			return;
 		}
-			try (Stream<Path> files = Files.list(root)) {
+		try (Stream<Path> files = Files.list(root)) {
 			for (Path file : files.toList()) {
 				String name = file.getFileName().toString();
 				if (!name.endsWith(".nbt")) {
@@ -83,12 +100,12 @@ public final class ContentLibrary {
 				entries.put(id, new Entry(id, tag.getUUID("author"), tag.getLong("created"), document));
 			}
 		}
-		version++;
+		version.incrementAndGet();
 	}
 
 	/** Bumped whenever the set of documents changes; caches compare it instead of listening. */
 	public long version() {
-		return version;
+		return version.get();
 	}
 
 	public Set<Id> ids() {
@@ -129,11 +146,11 @@ public final class ContentLibrary {
 		if (existing == null && count(author) >= maxPerAuthor) {
 			throw new IllegalStateException("library quota of " + maxPerAuthor + " entries per author is spent");
 		}
-		Entry entry = new Entry(id, author, existing == null ? System.currentTimeMillis() : existing.created(),
+		Entry entry = new Entry(id, author, existing == null ? clock.millis() : existing.created(),
 				document);
 		write(entry);
 		entries.put(id, entry);
-		version++;
+		version.incrementAndGet();
 		return entry;
 	}
 
@@ -148,7 +165,7 @@ public final class ContentLibrary {
 		}
 		Files.deleteIfExists(file(id));
 		entries.remove(id);
-		version++;
+		version.incrementAndGet();
 		return true;
 	}
 
@@ -168,11 +185,27 @@ public final class ContentLibrary {
 
 	private void write(Entry entry) throws IOException {
 		Files.createDirectories(root);
+		Path target = file(entry.id());
+		Path temp = target.resolveSibling(target.getFileName() + ".tmp");
 		CompoundTag tag = new CompoundTag();
 		tag.putUUID("author", entry.author());
 		tag.putLong("created", entry.created());
 		tag.put("document", entry.document());
-		NbtIo.write(tag, file(entry.id()).toFile());
+		try {
+			writer.write(tag, temp);
+			Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | RuntimeException exception) {
+			try {
+				Files.deleteIfExists(temp);
+			} catch (IOException cleanup) {
+				exception.addSuppressed(cleanup);
+			}
+			throw exception;
+		}
+	}
+
+	private static void writeNbt(CompoundTag tag, Path path) throws IOException {
+		NbtIo.write(tag, path.toFile());
 	}
 
 	private Path file(Id id) {

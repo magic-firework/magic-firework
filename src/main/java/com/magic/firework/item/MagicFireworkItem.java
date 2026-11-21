@@ -57,7 +57,7 @@ public class MagicFireworkItem extends Item {
 	}
 
 	private InteractionResult launchFrom(ServerLevel level, Player player, ItemStack stack, Vec3 position) {
-		FireworkRuntime runtime = RuntimeRegistry.current();
+		FireworkRuntime runtime = RuntimeRegistry.of(level.getServer());
 		if (runtime == null) {
 			return InteractionResult.FAIL;
 		}
@@ -66,7 +66,7 @@ public class MagicFireworkItem extends Item {
 			MagicFirework.LOGGER.warn("unknown firework profile {}", spec.profileId());
 			return InteractionResult.FAIL;
 		}
-		MagicFireworkEntity rocket = MagicFireworkEntity.launch(level, position, player.getLookAngle(), spec,
+		MagicFireworkEntity rocket = MagicFireworkEntity.launch(runtime, level, position, player.getLookAngle(), spec,
 				player, null);
 		if (rocket == null) {
 			return InteractionResult.FAIL;

@@ -8,15 +8,10 @@ import com.magic.firework.core.Transform;
 import com.magic.firework.core.Vec3;
 
 /**
- * A composable shape: a point cloud plus the transforms that place copies of it.
- *
- * <p>Forms are authoring units, not execution units. {@link #emit} flattens them into points
- * under the caller's {@link Meter}, so a ring of two hundred rings still cannot exceed the
- * server's point budget. The tree is plain data: no cycles, no code, no world.
- *
- * <p>{@code place}, {@code colorOffset} and {@code size} are the three knobs every node
- * shares: they compose down the tree, which is what lets one leaf ink become a ring of
- * recoloured, scaled copies without duplicating it.
+ * A composable shape: a point cloud plus the transforms that place copies of it. Forms are authoring
+ * units, not execution units; {@link #emit} flattens them into points under the caller's {@link Meter},
+ * so a ring of two hundred rings still cannot exceed the server's point budget. The tree is plain
+ * data (no cycles, no code, no world), and {@code place}, {@code colorOffset}, {@code size} compose down it.
  */
 public sealed interface Form {
 	Transform place();
@@ -52,8 +47,8 @@ public sealed interface Form {
 			if (granted <= 0) {
 				return;
 			}
-			ink.emit(new Ink.Emit(base, granted), (point, color, pointSize) ->
-					sink.point(transform.apply(point), color, pointSize * scale));
+			ink.emit(new Ink.Emit(base, granted),
+					(point, color, pointSize) -> sink.point(transform.apply(point), color, pointSize * scale));
 		}
 	}
 
@@ -115,7 +110,8 @@ public sealed interface Form {
 
 	/** {@code count} copies translated by {@code step} each. */
 	record Array(Form child, int count, Vec3 step, Transform place, int colorOffset, double size)
-			implements Form {
+			implements
+				Form {
 		public Array {
 			if (child == null) {
 				throw new IllegalArgumentException("array needs a child");
@@ -144,7 +140,8 @@ public sealed interface Form {
 
 	/** Reflections of one child across the selected local axes. */
 	record Mirror(Form child, boolean x, boolean y, boolean z, Transform place, int colorOffset, double size)
-			implements Form {
+			implements
+				Form {
 		public Mirror {
 			if (child == null) {
 				throw new IllegalArgumentException("mirror needs a child");

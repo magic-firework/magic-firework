@@ -10,12 +10,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 
 /**
- * Everything a running firework knows: the call stack, the tick counter, the attribute bag
- * and the seed. Pure data, no world access, so it can be saved, replayed and asserted
- * without a running server.
- *
- * <p>The bag is fixed for the entity's whole life: profile defaults overlaid with the item
- * overlay at launch. No op changes it, so {@code bag()} is simply that snapshot.
+ * Everything a running firework knows: the call stack, the tick counter, the attribute bag and the seed.
+ * Pure data, no world access, so it can be saved, replayed and asserted without a running server. The bag
+ * is fixed for the entity's whole life (profile defaults overlaid at launch); no op changes it, so
+ * {@code bag()} is simply that snapshot.
  */
 public final class ProgramState {
 	private final List<Frame> stack = new ArrayList<>();
@@ -52,8 +50,6 @@ public final class ProgramState {
 		state.initialized = true;
 		return state;
 	}
-
-	// ── state ────────────────────────────────────────────────────────────────
 
 	public boolean initialized() {
 		return initialized;
@@ -155,8 +151,6 @@ public final class ProgramState {
 		mixed ^= mixed >>> 33;
 		return mixed;
 	}
-
-	// ── persistence ──────────────────────────────────────────────────────────
 
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();

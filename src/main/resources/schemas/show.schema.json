@@ -269,6 +269,87 @@
         }
       ]
     },
+    "spark": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Turn every emitted point into a vanilla firework spark. The point is the direction (or the shape of the velocity); the spark carries its own lifetime, fade colour, trail and flicker. The client replays it with the real vanilla spark particle, so drag and gravity are vanilla's.",
+      "properties": {
+        "speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0.25,
+          "description": "Initial speed in blocks/tick: 0.25 is vanilla's small ball, 0.5 its large ball."
+        },
+        "speedSpread": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0.05,
+          "description": "Gaussian noise added to the speed of each spark."
+        },
+        "directionSpread": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0.5,
+          "description": "Uniform per-axis direction noise before the velocity is built; vanilla ball emitters use 0.5."
+        },
+        "lifetime": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 48,
+          "description": "Base spark lifetime in ticks; vanilla sparks are 48 ticks plus a random 0-11."
+        },
+        "lifetimeSpread": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096,
+          "default": 12,
+          "description": "Added uniformly in [0, lifetimeSpread); vanilla uses 12."
+        },
+        "trail": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let the spark leave the vanilla half-life trail sparks."
+        },
+        "flicker": {
+          "type": "boolean",
+          "default": false,
+          "description": "Make the spark blink like a vanilla flicker firework star."
+        },
+        "flash": {
+          "type": "boolean",
+          "default": true,
+          "description": "Emit one short vanilla flash at the stamp origin."
+        },
+        "normalize": {
+          "type": "boolean",
+          "default": true,
+          "description": "true: every spark gets the same speed regardless of point length (vanilla ball). false: the point itself is the velocity shape (vanilla star/creeper)."
+        },
+        "atOrigin": {
+          "type": "boolean",
+          "default": true,
+          "description": "true: sparks start at the stamp origin and use the point as a direction (vanilla). false: they start at the point."
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Palette indices chosen per spark; empty uses the ink's own colour index."
+        },
+        "fadeColors": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Palette indices the spark fades toward; empty means no fade colour."
+        }
+      }
+    },
     "event": {
       "type": "object",
       "additionalProperties": false,
@@ -391,6 +472,9 @@
           "maximum": 16,
           "default": 0,
           "description": "Uniform random displacement applied to each point."
+        },
+        "spark": {
+          "$ref": "#/$defs/spark"
         },
         "events": {
           "type": "array",

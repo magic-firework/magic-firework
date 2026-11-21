@@ -31,7 +31,7 @@ class EvaluateTest {
 	}
 
 	private static Show show(Stamp... stamps) {
-		return new Show(SHOW, new int[] { 0xFFFFFF }, List.of(stamps));
+		return new Show(SHOW, new int[]{0xFFFFFF}, List.of(stamps));
 	}
 
 	private static Plan plan(Show show) {
@@ -89,7 +89,7 @@ class EvaluateTest {
 
 	@Test
 	void sizeAndColorOffsetAreAppliedByTheForm() {
-		Ink ink = Ink.of(new Id("test", "inked"), new Vec3[] { Vec3.ZERO }, new int[] { 1 }, new double[] { 2.0 });
+		Ink ink = Ink.of(new Id("test", "inked"), new Vec3[]{Vec3.ZERO}, new int[]{1}, new double[]{2.0});
 		Form form = new Form.Leaf(ink, Transform.IDENTITY, 2, 3.0);
 		Stamp stamp = new Stamp(form, 0, 0, null, Transform.IDENTITY, 1.0, 0.0, 0.0, List.of());
 
@@ -121,6 +121,18 @@ class EvaluateTest {
 
 		assertTrue(stream.size() > 1);
 		assertTrue(stream.isTimeOrdered(), "the client walks the stream with one cursor");
+	}
+
+	@Test
+	void aFullBudgetIsNotTruncated() {
+		assertTrue(!plan(show(stamp(dot(), 0, 0, null))).truncated());
+	}
+
+	@Test
+	void aTightBudgetMarksThePlanTruncated() {
+		Plan plan = Evaluate.evaluate(show(stamp(dot(), 0, 0, null)), new Seed(1L), Budget.of(0));
+
+		assertTrue(plan.truncated());
 	}
 
 	@Test
@@ -177,7 +189,7 @@ class EvaluateTest {
 
 	@Test
 	void mirrorReflectsAcrossTheRequestedAxes() {
-		Ink right = Ink.of(new Id("test", "right"), new Vec3[] { new Vec3(1.0, 0.0, 0.0) }, new int[0], new double[0]);
+		Ink right = Ink.of(new Id("test", "right"), new Vec3[]{new Vec3(1.0, 0.0, 0.0)}, new int[0], new double[0]);
 		Form mirror = new Form.Mirror(Form.leaf(right), true, false, false, Transform.IDENTITY, 0, 1.0);
 
 		List<FrameStream.Point> points = Evaluate.evaluate(show(stamp(mirror, 0, 0, null)),

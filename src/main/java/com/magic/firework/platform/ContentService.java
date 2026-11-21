@@ -16,13 +16,10 @@ import com.magic.firework.core.shape.Ink;
 import com.magic.firework.core.show.Show;
 
 /**
- * Resolves a {@code show} reference against the current data-pack snapshot, the inline cache
- * and the writable library.
- *
- * <p>One instance per server, owned by {@link FireworkRuntime}. Swapping a snapshot is a
- * single reference write; the caches are cleared at the same time, so no reader can see a
- * half-reloaded world. Library lookups are cached by id and invalidated by
- * {@link ContentLibrary#version()}, so a burst no longer copies the NBT document every time.
+ * Resolves a {@code show} reference against the current data-pack snapshot, the inline cache and the
+ * writable library. One instance per server, owned by {@link FireworkRuntime}: swapping a snapshot is a
+ * single reference write, and the caches are cleared at the same time, so no reader sees a half-reloaded
+ * world. Library lookups are cached by id and invalidated by {@link ContentLibrary#version()}.
  */
 public final class ContentService {
 	private volatile ContentSnapshot snapshot = ContentSnapshot.empty();
@@ -30,9 +27,9 @@ public final class ContentService {
 	private volatile long libraryVersion = -1;
 
 	/** Parsed inline shows, least-recently-used first. */
-	private final Map<Long, Optional<Show>> inlineCache = new LinkedHashMap<>(16, 0.75F, true) {
+	private final Map<ContentRef.Inline, Optional<Show>> inlineCache = new LinkedHashMap<>(16, 0.75F, true) {
 		@Override
-		protected boolean removeEldestEntry(Map.Entry<Long, Optional<Show>> eldest) {
+		protected boolean removeEldestEntry(Map.Entry<ContentRef.Inline, Optional<Show>> eldest) {
 			return size() > ContentLimits.MAX_INLINE_CACHE;
 		}
 	};
@@ -75,7 +72,7 @@ public final class ContentService {
 			return installed != null ? installed : libraryShow(byId.id()).orElse(null);
 		}
 		ContentRef.Inline inline = (ContentRef.Inline) ref;
-		return inlineCache.computeIfAbsent(inline.fingerprint(), key -> parseInline(inline)).orElse(null);
+		return inlineCache.computeIfAbsent(inline, key -> parseInline(inline)).orElse(null);
 	}
 
 	private Optional<Show> libraryShow(Id id) {
@@ -101,7 +98,7 @@ public final class ContentService {
 	}
 
 	private Optional<Show> parseInline(ContentRef.Inline inline) {
-		Id id = new Id(ContentLibrary.NAMESPACE, "inline/" + Long.toHexString(inline.fingerprint()));
+		Id id = new Id(ContentLibrary.NAMESPACE, "inline/" + inline.fingerprintHex());
 		try {
 			return Optional.of(TagCodec.parseShow(id, inline.document(), this::ink));
 		} catch (TagCodec.CodecException | RuntimeException exception) {

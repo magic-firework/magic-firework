@@ -11,20 +11,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Runs one tick of a program.
- *
- * <p>Rules, in order:
- * <ol>
- *   <li>execute ops in order until the top frame is waiting on an {@link Op.Wait};</li>
- *   <li>a frame whose program counter leaves the end is popped (implicit {@code end});</li>
- *   <li>at most {@link FireworkLimits#maxOpsPerTick} ops run per tick, so a pathological
- *       program cannot stall the server;</li>
- *   <li>ops only mutate {@link ProgramState} or append an {@link Effect}.</li>
- * </ol>
- *
- * <p>Time is spent by {@link Op.Wait} and by nothing else: the interpreter either runs the op
- * under the pointer or reports that this frame is still waiting, so no op ever blocks on
- * anything but its own schedule.
+ * Runs one tick of a program. Ops execute in order until the top frame waits on an {@link Op.Wait}; a
+ * frame whose counter leaves the end is popped (implicit {@code end}); at most
+ * {@link FireworkLimits#maxOpsPerTick} ops run per tick, so a pathological program cannot stall the
+ * server. Ops only mutate {@link ProgramState} or append an {@link Effect}; only {@link Op.Wait} spends time.
  */
 public final class Interpreter {
 	private Interpreter() {
@@ -103,13 +93,16 @@ public final class Interpreter {
 				}
 			}
 			float volume = bag.has(Attributes.SOUND_VOLUME.key())
-					? Attributes.SOUND_VOLUME.get(bag) : sound.volume();
+					? Attributes.SOUND_VOLUME.get(bag)
+					: sound.volume();
 			float pitch = bag.has(Attributes.SOUND_PITCH.key())
-					? Attributes.SOUND_PITCH.get(bag) : sound.pitch();
+					? Attributes.SOUND_PITCH.get(bag)
+					: sound.pitch();
 			out.add(new Effect.PlaySound(id, volume, pitch));
 		} else if (op instanceof Op.Light light) {
 			int ticks = bag.has(Attributes.LIGHT_TICKS.key())
-					? Attributes.LIGHT_TICKS.get(bag) : light.ticks();
+					? Attributes.LIGHT_TICKS.get(bag)
+					: light.ticks();
 			out.add(new Effect.Light(ticks));
 		} else if (op instanceof Op.End) {
 			state.pop();

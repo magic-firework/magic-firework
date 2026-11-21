@@ -3,17 +3,21 @@ package com.magic.firework;
 import java.io.IOException;
 
 import com.magic.firework.command.FireworkCommand;
+import com.magic.firework.config.FireworkConfig;
 import com.magic.firework.content.ContentLibrary;
 import com.magic.firework.network.FireworkNetworking;
 import com.magic.firework.platform.ContentReloadListener;
 import com.magic.firework.platform.FireworkRuntime;
 import com.magic.firework.platform.RuntimeRegistry;
 import com.magic.firework.registry.DefinitionReloadListener;
+import com.magic.firework.registry.ModParticles;
 import com.magic.firework.registry.ModRegistries;
 import com.magic.firework.recipe.ModRecipes;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -33,8 +37,14 @@ public class MagicFirework implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		FireworkConfig config = FireworkConfig.load(
+				FabricLoader.getInstance().getConfigDir().resolve("magic-firework.json"));
+		config.apply();
+		LOGGER.info("firework limits: {}", config);
+
 		// content: profiles and shows from data packs, plus the writable library
 		ModRegistries.init();
+		ModParticles.init();
 		ModRecipes.init();
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new DefinitionReloadListener());
 		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new ContentReloadListener());
@@ -46,6 +56,7 @@ public class MagicFirework implements ModInitializer {
 			FireworkRuntime runtime = RuntimeRegistry.current();
 			if (runtime != null) {
 				runtime.bindLibrary(openLibrary(server));
+				runtime.bindLights();
 			}
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -55,6 +66,12 @@ public class MagicFirework implements ModInitializer {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(RuntimeRegistry::stop);
+		ServerWorldEvents.UNLOAD.register((server, world) -> {
+			FireworkRuntime runtime = RuntimeRegistry.current();
+			if (runtime != null) {
+				runtime.onDimensionUnload(world.dimension());
+			}
+		});
 
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES)
 				.register(entries -> {

@@ -14,6 +14,7 @@ import com.magic.firework.core.shape.Form;
 import com.magic.firework.core.shape.Ink;
 import com.magic.firework.core.show.EventSpec;
 import com.magic.firework.core.show.Show;
+import com.magic.firework.core.show.Spark;
 import com.magic.firework.core.show.Stamp;
 
 import net.minecraft.nbt.ByteArrayTag;
@@ -26,19 +27,14 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
 /**
- * The content schema, read from NBT.
- *
- * <p>NBT is the canonical representation: an item's {@code show} value, a data pack file and a
- * library entry are the same thing after {@link com.magic.firework.content.JsonToNbt} has run,
- * so one parser serves all three. Unknown keys are ignored (forward compatibility); unknown
- * {@code type} values and dangling ids are hard errors, because silently skipping a node
- * would draw a different figure than the author wrote.
+ * The content schema, read from NBT. NBT is canonical: an item's {@code show} value, a data pack file
+ * and a library entry are the same thing after {@link com.magic.firework.content.JsonToNbt} has run,
+ * so one parser serves all three. Unknown keys are ignored (forward compatibility), while unknown
+ * {@code type} values and dangling ids are hard errors: skipping a node would draw a different figure.
  */
 public final class TagCodec {
 	private TagCodec() {
 	}
-
-	// ── ink ─────────────────────────────────────────────────────────────────
 
 	public static Ink parseInk(Id id, Tag json) throws CodecException {
 		CompoundTag object = object(json, "ink " + id);
@@ -82,13 +78,11 @@ public final class TagCodec {
 		}
 	}
 
-	// ── show ────────────────────────────────────────────────────────────────
-
 	public static Show parseShow(Id id, Tag json, Function<Id, Ink> inks) throws CodecException {
 		CompoundTag object = object(json, "show " + id);
 		int[] palette = ints(object, "palette");
 		if (palette.length == 0) {
-			palette = new int[] { Show.DEFAULT_COLOR };
+			palette = new int[]{Show.DEFAULT_COLOR};
 		}
 		if (palette.length > ContentLimits.MAX_PALETTE) {
 			throw new CodecException("show " + id + " has more than " + ContentLimits.MAX_PALETTE + " palette entries");
@@ -98,7 +92,7 @@ public final class TagCodec {
 			throw new CodecException("show " + id + " has more than " + ContentLimits.MAX_STAMPS + " stamps");
 		}
 		List<Stamp> stamps = new ArrayList<>(array.size());
-		int[] nodes = { 0 };
+		int[] nodes = {0};
 		for (int i = 0; i < array.size(); i++) {
 			stamps.add(stamp(array.get(i), id, "stamps[" + i + "]", inks, nodes));
 		}
@@ -117,10 +111,28 @@ public final class TagCodec {
 		double thickness = object.get("thickness") == null ? 0.0 : number(object.get("thickness"));
 		double jitter = object.get("jitter") == null ? 0.0 : number(object.get("jitter"));
 		List<EventSpec> events = events(object.get("events"), showId, where);
-		return new Stamp(form, at, duration, path, place, size, thickness, jitter, events);
+		Spark spark = object.get("spark") == null ? null : spark(object.get("spark"), showId, where);
+		return new Stamp(form, at, duration, path, place, size, thickness, jitter, events, spark);
 	}
 
-	// ── form ────────────────────────────────────────────────────────────────
+	private static Spark spark(Tag json, Id showId, String where) throws CodecException {
+		CompoundTag object = object(json, "show " + showId + ": " + where + ".spark");
+		return new Spark(
+				object.get("speed") == null ? Spark.DEFAULT_SPEED : number(object.get("speed")),
+				object.get("speedSpread") == null ? Spark.DEFAULT_SPEED_SPREAD : number(object.get("speedSpread")),
+				object.get("directionSpread") == null
+						? Spark.DEFAULT_DIRECTION_SPREAD
+						: number(object.get("directionSpread")),
+				integer(object, "lifetime", Spark.DEFAULT_LIFETIME),
+				integer(object, "lifetimeSpread", Spark.DEFAULT_LIFETIME_SPREAD),
+				bool(object, "trail", false),
+				bool(object, "flicker", false),
+				bool(object, "flash", true),
+				bool(object, "normalize", true),
+				bool(object, "atOrigin", true),
+				ints(object, "colors"),
+				ints(object, "fadeColors"));
+	}
 
 	private static Form form(Tag json, Id showId, String where, Function<Id, Ink> inks, int[] nodes, int depth)
 			throws CodecException {
@@ -189,7 +201,8 @@ public final class TagCodec {
 					}
 				}
 				if (!x && !y && !z) {
-					throw new CodecException("show " + showId + ": " + where + ".shape.axes must name at least one axis");
+					throw new CodecException(
+							"show " + showId + ": " + where + ".shape.axes must name at least one axis");
 				}
 				yield new Form.Mirror(
 						form(object.get("shape"), showId, where + ".shape", inks, nodes, depth + 1),
@@ -218,7 +231,8 @@ public final class TagCodec {
 		String type = string(object, "type", "none").toLowerCase(Locale.ROOT);
 		return switch (type) {
 			case "none" -> new Path.None();
-			case "line" -> new Path.Line(number(object.get("length"), "show " + showId + ": " + where + ".path.length"));
+			case "line" ->
+				new Path.Line(number(object.get("length"), "show " + showId + ": " + where + ".path.length"));
 			case "arc" -> new Path.Arc(
 					number(object.get("radius"), "show " + showId + ": " + where + ".path.radius"),
 					number(object.get("degrees"), "show " + showId + ": " + where + ".path.degrees"));
@@ -259,8 +273,6 @@ public final class TagCodec {
 		return events;
 	}
 
-	// ── helpers ─────────────────────────────────────────────────────────────
-
 	private static CompoundTag object(Tag tag, String what) throws CodecException {
 		if (!(tag instanceof CompoundTag compound)) {
 			throw new CodecException(what + " must be a compound");
@@ -290,6 +302,11 @@ public final class TagCodec {
 	private static int integer(CompoundTag object, String key, int fallback) {
 		Tag value = object.get(key);
 		return value instanceof NumericTag number ? number.getAsInt() : fallback;
+	}
+
+	private static boolean bool(CompoundTag object, String key, boolean fallback) {
+		Tag value = object.get(key);
+		return value instanceof NumericTag number ? number.getAsByte() != 0 : fallback;
 	}
 
 	private static double number(Tag tag) throws CodecException {

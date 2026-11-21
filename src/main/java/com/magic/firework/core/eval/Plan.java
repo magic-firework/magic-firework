@@ -12,14 +12,14 @@ import com.magic.firework.core.show.EventSpec;
  * <p>There is deliberately no "live subtree" in this model any more. Every point has a tick,
  * so the client can play the whole show from one packet with one cursor.
  */
-public record Plan(FrameStream stream, List<ScheduledEvent> events) {
+public record Plan(FrameStream stream, List<ScheduledEvent> events, boolean truncated) {
 	public Plan {
 		stream = stream == null ? FrameStream.empty() : stream;
 		events = events == null ? List.of() : List.copyOf(events);
 	}
 
 	public static Plan empty() {
-		return new Plan(FrameStream.empty(), List.of());
+		return new Plan(FrameStream.empty(), List.of(), false);
 	}
 
 	public boolean isEmpty() {
